@@ -38,7 +38,6 @@ architecture Behavioral of CHAR_GEN is
     signal ROM_DATA : STD_LOGIC_VECTOR(7 downto 0);
     signal INTENSITY : STD_LOGIC;
 
-<<<<<<< HEAD
 -- Match MY_CHAR_DRIVER top-left anchor and 16x16 glyph footprint (2x scale).
 constant TEXT_START_X : integer := 284;
 constant TEXT_END_X   : integer := 460; -- 11 chars * 16px
@@ -53,21 +52,6 @@ COMPONENT rom1kx8
   );
 END COMPONENT;
 -- -----------------------------------------------------------------------------
-=======
-    -- Match MY_CHAR_DRIVER top-left anchor and 16x16 glyph footprint (2x scale).
-    constant TEXT_START_X : integer := 284;
-    constant TEXT_END_X   : integer := 460; -- 11 chars * 16px
-    constant TEXT_START_Y : integer := 49;
-    constant TEXT_END_Y   : integer := 65;  -- 16px
-
-    COMPONENT rom1kx8
-      PORT (
-        clka  : IN STD_LOGIC;
-        addra : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
-        douta : OUT STD_LOGIC_VECTOR(7 DOWNTO 0)
-      );
-    END COMPONENT;
->>>>>>> e4bd0343ecc919e2f1c3c2d69f8458959f7aae99
 begin
     my_rom : rom1kx8
       PORT MAP (
@@ -76,24 +60,6 @@ begin
         douta => ROM_DATA
       );
 
-<<<<<<< HEAD
-process(hcount, vcount)
-  variable h_i : integer;
-  variable v_i : integer;
-begin
-  h_i := conv_integer(hcount);
-  v_i := conv_integer(vcount);
-
-  if (h_i >= TEXT_START_X and h_i < TEXT_END_X and
-    v_i >= TEXT_START_Y and v_i < TEXT_END_Y) then
-    pixel_row <= conv_std_logic_vector((v_i - TEXT_START_Y) / 2, 3);
-    pixel_col <= conv_std_logic_vector((h_i - TEXT_START_X) / 2, 3);
-  else
-    pixel_row <= (others => '0');
-    pixel_col <= (others => '0');
-  end if;
-end process;
-=======
     process(hcount, vcount)
         variable h_i : integer;
         variable v_i : integer;
@@ -110,7 +76,6 @@ end process;
             pixel_col <= (others => '0');
         end if;
     end process;
->>>>>>> e4bd0343ecc919e2f1c3c2d69f8458959f7aae99
 
     ROM_ADDRESS <= ASCII_CHAR & pixel_row;
 
