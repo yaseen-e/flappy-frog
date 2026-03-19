@@ -81,6 +81,7 @@ architecture Behavioral of FlappyFrog is
     constant FROG_Y      : integer := 200;
     constant FROG_WIDTH  : integer := 90;
     constant FROG_HEIGHT : integer := 90;
+    constant FROG_TRANSPARENT_COLOR : STD_LOGIC_VECTOR(11 downto 0) := "111111111111";
     constant FROG_LOCK_X : integer := (ACTIVE_WIDTH / 2) - (FROG_WIDTH / 2);
 
     signal frog_rom_addr : STD_LOGIC_VECTOR(15 downto 0);
@@ -456,8 +457,8 @@ begin
         end if;
     end process;
 
-    -- Determine if we should draw the frog (using "011110111110" as the transparent background color)
-    draw_frog <= '1' when is_frog_delay = '1' and frog_rom_data /= "011110111110" else '0';
+    -- Skip transparent white pixels from TheFrog_transparent.coe (0xFFF).
+    draw_frog <= '1' when is_frog_delay = '1' and frog_rom_data /= FROG_TRANSPARENT_COLOR else '0';
 
     -- -------------------------------------------------------------------------
     -- Color Logic (Frog, Text & Background Rectangles)
