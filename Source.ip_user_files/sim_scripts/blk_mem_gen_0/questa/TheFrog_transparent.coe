@@ -1,3 +1,9 @@
+; VGA Memory Map 
+; .COE file with bin coefficients 
+; Height: 90, Width: 90
+
+memory_initialization_radix=2;
+memory_initialization_vector=
 111111111111
 111111111111
 111111111111
@@ -8098,3 +8104,4 @@
 111111111111
 111111111111
 111111111111
+;
