@@ -34,7 +34,7 @@ entity frog_motion is
 end frog_motion;
 
 architecture Behavioral of frog_motion is
-	constant SCREEN_WIDTH : integer := 1280;
+	constant SCREEN_WIDTH : integer := 2600;
 	constant FROG_WIDTH   : integer := 90;
 	constant MIN_X        : integer := 0;
 	constant MAX_X        : integer := SCREEN_WIDTH - FROG_WIDTH;

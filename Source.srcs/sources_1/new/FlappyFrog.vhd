@@ -57,6 +57,11 @@ architecture Behavioral of FlappyFrog is
     constant vfp_begin : integer := 745;
     constant vline_end : integer := 750;
 
+    -- Active-world/camera constants
+    constant ACTIVE_WIDTH     : integer := hfp_begin - hbp_end; -- 1280
+    constant WORLD_WIDTH_PX   : integer := 2600; -- Short test world length
+    constant SCENE_X_MAX      : integer := WORLD_WIDTH_PX - ACTIVE_WIDTH;
+
     -- Counters (Using unsigned for arithmetic operations)
     signal hcount : unsigned(11 downto 0) := (others => '0');
     signal vcount : unsigned(11 downto 0) := (others => '0');
@@ -76,6 +81,7 @@ architecture Behavioral of FlappyFrog is
     constant FROG_Y      : integer := 200;
     constant FROG_WIDTH  : integer := 90;
     constant FROG_HEIGHT : integer := 90;
+    constant FROG_LOCK_X : integer := (ACTIVE_WIDTH / 2) - (FROG_WIDTH / 2);
 
     signal frog_rom_addr : STD_LOGIC_VECTOR(15 downto 0);
     signal frog_rom_data : STD_LOGIC_VECTOR(11 downto 0);
@@ -89,17 +95,31 @@ architecture Behavioral of FlappyFrog is
     signal btn2_db       : STD_LOGIC;
     signal btn3_db       : STD_LOGIC;
     signal frog_x        : unsigned(10 downto 0);
+    signal frog_world_x  : integer;
+    signal frog_draw_x   : integer;
     signal active_x      : integer;
     signal active_y      : integer;
     signal scene_x       : integer := 0;
     signal platform_1_x  : integer;
     signal platform_2_x  : integer;
+    signal platform_3_x  : integer;
+    signal platform_4_x  : integer;
+    signal platform_5_x  : integer;
+    signal platform_6_x  : integer;
     signal platform_1_on : STD_LOGIC;
     signal platform_2_on : STD_LOGIC;
+    signal platform_3_on : STD_LOGIC;
+    signal platform_4_on : STD_LOGIC;
+    signal platform_5_on : STD_LOGIC;
+    signal platform_6_on : STD_LOGIC;
     signal draw_platform : STD_LOGIC;
 
     constant PLATFORM_1_WORLD_X : integer := 220;
     constant PLATFORM_2_WORLD_X : integer := 520;
+    constant PLATFORM_3_WORLD_X : integer := 880;
+    constant PLATFORM_4_WORLD_X : integer := 1240;
+    constant PLATFORM_5_WORLD_X : integer := 1720;
+    constant PLATFORM_6_WORLD_X : integer := 2260;
 
     -- -------------------------------------------------------------------------
     -- Component Declarations
@@ -223,10 +243,19 @@ begin
     -- Conversion from unsigned to std_logic_vector for submodules
     hcount_vec <= std_logic_vector(hcount(10 downto 0));
     vcount_vec <= std_logic_vector(vcount(10 downto 0));
+    frog_world_x <= to_integer(frog_x);
+    scene_x <= 0 when frog_world_x <= FROG_LOCK_X else
+               SCENE_X_MAX when frog_world_x >= (FROG_LOCK_X + SCENE_X_MAX) else
+               (frog_world_x - FROG_LOCK_X);
+    frog_draw_x <= frog_world_x - scene_x;
     active_x <= to_integer(hcount) - hbp_end;
     active_y <= to_integer(vcount) - vbp_end;
     platform_1_x <= PLATFORM_1_WORLD_X - scene_x;
     platform_2_x <= PLATFORM_2_WORLD_X - scene_x;
+    platform_3_x <= PLATFORM_3_WORLD_X - scene_x;
+    platform_4_x <= PLATFORM_4_WORLD_X - scene_x;
+    platform_5_x <= PLATFORM_5_WORLD_X - scene_x;
+    platform_6_x <= PLATFORM_6_WORLD_X - scene_x;
 
     -- Keep button control signals in the pixel clock domain.
     process(pix_clk)
@@ -292,7 +321,55 @@ begin
             pixel_on   => platform_2_on
         );
 
-    draw_platform <= '1' when vde = '1' and (platform_1_on = '1' or platform_2_on = '1') else '0';
+    platform_3_inst : platform
+        Port Map (
+            clk        => pix_clk,
+            rst        => pix_rst,
+            pixel_x    => active_x,
+            pixel_y    => active_y,
+            platform_x => platform_3_x,
+            unit_size  => 3,
+            pixel_on   => platform_3_on
+        );
+
+    platform_4_inst : platform
+        Port Map (
+            clk        => pix_clk,
+            rst        => pix_rst,
+            pixel_x    => active_x,
+            pixel_y    => active_y,
+            platform_x => platform_4_x,
+            unit_size  => 1,
+            pixel_on   => platform_4_on
+        );
+
+    platform_5_inst : platform
+        Port Map (
+            clk        => pix_clk,
+            rst        => pix_rst,
+            pixel_x    => active_x,
+            pixel_y    => active_y,
+            platform_x => platform_5_x,
+            unit_size  => 4,
+            pixel_on   => platform_5_on
+        );
+
+    platform_6_inst : platform
+        Port Map (
+            clk        => pix_clk,
+            rst        => pix_rst,
+            pixel_x    => active_x,
+            pixel_y    => active_y,
+            platform_x => platform_6_x,
+            unit_size  => 2,
+            pixel_on   => platform_6_on
+        );
+
+    draw_platform <= '1' when vde = '1' and
+                              (platform_1_on = '1' or platform_2_on = '1' or
+                               platform_3_on = '1' or platform_4_on = '1' or
+                               platform_5_on = '1' or platform_6_on = '1')
+                     else '0';
 
     -- -------------------------------------------------------------------------
     -- Clocking Wizard Instantiation
@@ -361,11 +438,11 @@ begin
 
             -- Check sprite bounds only inside active video.
             if (vde = '1' and
-                x_active >= to_integer(frog_x) and x_active < to_integer(frog_x) + FROG_WIDTH and
+                x_active >= frog_draw_x and x_active < frog_draw_x + FROG_WIDTH and
                 y_active >= FROG_Y and y_active < FROG_Y + FROG_HEIGHT) then
                 
                 is_frog <= '1';
-                x_offset := x_active - to_integer(frog_x);
+                x_offset := x_active - frog_draw_x;
                 y_offset := y_active - FROG_Y;
                 
                 -- Convert 2D (X,Y) coordinate to 1D ROM address: (Y * Width) + X
