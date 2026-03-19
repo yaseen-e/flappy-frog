@@ -6,6 +6,8 @@ entity FlappyFrog is
     Port (
         clk         : in  STD_LOGIC;
         rst         : in  STD_LOGIC;
+        btn2        : in  STD_LOGIC;
+        btn3        : in  STD_LOGIC;
         
         hdmi_tx_hpd : out STD_LOGIC;
         TMDS_CLK_P  : out STD_LOGIC;
@@ -71,7 +73,6 @@ architecture Behavioral of FlappyFrog is
     -- Frog Constants and Signals
     -- -------------------------------------------------------------------------
     -- Sprite location is in active-video coordinates (0..1279, 0..719)
-    constant FROG_X      : integer := 100;
     constant FROG_Y      : integer := 200;
     constant FROG_WIDTH  : integer := 90;
     constant FROG_HEIGHT : integer := 90;
@@ -81,6 +82,13 @@ architecture Behavioral of FlappyFrog is
     signal is_frog       : STD_LOGIC := '0';
     signal is_frog_delay : STD_LOGIC := '0';
     signal draw_frog     : STD_LOGIC;
+    signal btn2_sync_1   : STD_LOGIC := '0';
+    signal btn2_sync_2   : STD_LOGIC := '0';
+    signal btn3_sync_1   : STD_LOGIC := '0';
+    signal btn3_sync_2   : STD_LOGIC := '0';
+    signal btn2_db       : STD_LOGIC;
+    signal btn3_db       : STD_LOGIC;
+    signal frog_x        : unsigned(10 downto 0);
 
     -- -------------------------------------------------------------------------
     -- Component Declarations
@@ -165,6 +173,24 @@ architecture Behavioral of FlappyFrog is
         );
     end component;
 
+    component Debouncer
+        Port (
+            clk     : in STD_LOGIC;
+            btn_in  : in STD_LOGIC;
+            btn_out : out STD_LOGIC
+        );
+    end component;
+
+    component frog_motion
+        Port (
+            clk        : in  STD_LOGIC;
+            rst        : in  STD_LOGIC;
+            move_left  : in  STD_LOGIC;
+            move_right : in  STD_LOGIC;
+            frog_x     : out unsigned(10 downto 0)
+        );
+    end component;
+
 begin
 
     -- Reset logic
@@ -174,6 +200,48 @@ begin
     -- Conversion from unsigned to std_logic_vector for submodules
     hcount_vec <= std_logic_vector(hcount(10 downto 0));
     vcount_vec <= std_logic_vector(vcount(10 downto 0));
+
+    -- Keep button control signals in the pixel clock domain.
+    process(pix_clk)
+    begin
+        if rising_edge(pix_clk) then
+            if pix_rst = '1' then
+                btn2_sync_1 <= '0';
+                btn2_sync_2 <= '0';
+                btn3_sync_1 <= '0';
+                btn3_sync_2 <= '0';
+            else
+                btn2_sync_1 <= btn2;
+                btn2_sync_2 <= btn2_sync_1;
+                btn3_sync_1 <= btn3;
+                btn3_sync_2 <= btn3_sync_1;
+            end if;
+        end if;
+    end process;
+
+    -- Button conditioning and frog horizontal motion.
+    btn2_debouncer_inst : Debouncer
+        Port Map (
+            clk     => pix_clk,
+            btn_in  => btn2_sync_2,
+            btn_out => btn2_db
+        );
+
+    btn3_debouncer_inst : Debouncer
+        Port Map (
+            clk     => pix_clk,
+            btn_in  => btn3_sync_2,
+            btn_out => btn3_db
+        );
+
+    frog_motion_inst : frog_motion
+        Port Map (
+            clk        => pix_clk,
+            rst        => pix_rst,
+            move_left  => btn2_db,
+            move_right => btn3_db,
+            frog_x     => frog_x
+        );
 
     -- -------------------------------------------------------------------------
     -- Clocking Wizard Instantiation
@@ -242,11 +310,11 @@ begin
 
             -- Check sprite bounds only inside active video.
             if (vde = '1' and
-                x_active >= FROG_X and x_active < FROG_X + FROG_WIDTH and
+                x_active >= to_integer(frog_x) and x_active < to_integer(frog_x) + FROG_WIDTH and
                 y_active >= FROG_Y and y_active < FROG_Y + FROG_HEIGHT) then
                 
                 is_frog <= '1';
-                x_offset := x_active - FROG_X;
+                x_offset := x_active - to_integer(frog_x);
                 y_offset := y_active - FROG_Y;
                 
                 -- Convert 2D (X,Y) coordinate to 1D ROM address: (Y * Width) + X

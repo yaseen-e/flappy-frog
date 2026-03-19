@@ -10,6 +10,12 @@ create_clock -period 10.000 -name sys_clk_pin -waveform {0.000 5.000} -add [get_
 set_property -dict {PACKAGE_PIN J2 IOSTANDARD LVCMOS33} [get_ports {rst}]
 
 # ---------------------------------------------------------------------------
+# Push Buttons (BTN2=Left, BTN3=Right)
+# ---------------------------------------------------------------------------
+set_property -dict {PACKAGE_PIN H2 IOSTANDARD LVCMOS33} [get_ports {btn2}]
+set_property -dict {PACKAGE_PIN J1 IOSTANDARD LVCMOS33} [get_ports {btn3}]
+
+# ---------------------------------------------------------------------------
 # Switches (Mapping to Slide Switches 0-7)
 # ---------------------------------------------------------------------------
 set_property -dict {PACKAGE_PIN V2 IOSTANDARD LVCMOS33} [get_ports {sw[0]}]
