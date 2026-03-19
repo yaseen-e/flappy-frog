@@ -45,11 +45,11 @@ begin
     process(h_int, v_int)
         variable char_index : integer range 0 to 15;
     begin
-        -- 11 chars x 8 px = 88 px wide, 8 px high.
+        -- 11 chars x 16 px = 176 px wide, 16 px high (2x scale).
         -- Active video starts at h=260, v=25; use equal 24 px padding from top-left.
-        -- Bounding box: x=[284,372), y=[49,57)
-        if (h_int >= 284 and h_int < 372) and (v_int >= 49 and v_int < 57) then
-            char_index := (h_int - 284) / 8;
+        -- Bounding box: x=[284,460), y=[49,65)
+        if (h_int >= 284 and h_int < 460) and (v_int >= 49 and v_int < 65) then
+            char_index := (h_int - 284) / 16;
             case char_index is
                 when 0 => ASCII_CHAR <= "0000001"; -- 'F' (Index 1)
                 when 1 => ASCII_CHAR <= "0000010"; -- 'L' (Index 2)

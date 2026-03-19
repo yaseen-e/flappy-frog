@@ -38,11 +38,11 @@ architecture Behavioral of CHAR_GEN is
     signal ROM_DATA : STD_LOGIC_VECTOR(7 downto 0);
     signal INTENSITY : STD_LOGIC;
 
-    -- Match MY_CHAR_DRIVER top-left anchor and 8x8 glyph footprint.
+    -- Match MY_CHAR_DRIVER top-left anchor and 16x16 glyph footprint (2x scale).
     constant TEXT_START_X : integer := 284;
-    constant TEXT_END_X   : integer := 372; -- 11 chars * 8px
+    constant TEXT_END_X   : integer := 460; -- 11 chars * 16px
     constant TEXT_START_Y : integer := 49;
-    constant TEXT_END_Y   : integer := 57;  -- 8px
+    constant TEXT_END_Y   : integer := 65;  -- 16px
 
     COMPONENT rom1kx8
       PORT (
@@ -68,8 +68,8 @@ begin
 
         if (h_i >= TEXT_START_X and h_i < TEXT_END_X and
             v_i >= TEXT_START_Y and v_i < TEXT_END_Y) then
-            pixel_row <= std_logic_vector(to_unsigned(v_i - TEXT_START_Y, 3));
-            pixel_col <= std_logic_vector(to_unsigned(h_i - TEXT_START_X, 3));
+            pixel_row <= std_logic_vector(to_unsigned((v_i - TEXT_START_Y) / 2, 3));
+            pixel_col <= std_logic_vector(to_unsigned((h_i - TEXT_START_X) / 2, 3));
         else
             pixel_row <= (others => '0');
             pixel_col <= (others => '0');
