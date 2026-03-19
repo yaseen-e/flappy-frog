@@ -88,6 +88,7 @@ architecture Behavioral of FlappyFrog is
     signal btn3_sync_2   : STD_LOGIC := '0';
     signal btn2_db       : STD_LOGIC;
     signal btn3_db       : STD_LOGIC;
+    signal frame_tick    : STD_LOGIC;
     signal frog_x        : unsigned(10 downto 0);
 
     -- -------------------------------------------------------------------------
@@ -185,6 +186,7 @@ architecture Behavioral of FlappyFrog is
         Port (
             clk         : in  STD_LOGIC;
             rst         : in  STD_LOGIC;
+            frame_tick  : in  STD_LOGIC;
             move_left   : in  STD_LOGIC;
             move_right  : in  STD_LOGIC;
             frog_x      : out unsigned(10 downto 0)
@@ -200,6 +202,7 @@ begin
     -- Conversion from unsigned to std_logic_vector for submodules
     hcount_vec <= std_logic_vector(hcount(10 downto 0));
     vcount_vec <= std_logic_vector(vcount(10 downto 0));
+    frame_tick <= '1' when (hcount = 0 and vcount = 0) else '0';
 
     -- Keep all gameplay control signals in the pixel clock domain.
     process(pix_clk)
@@ -240,6 +243,7 @@ begin
         Port Map (
             clk        => pix_clk,
             rst        => pix_rst,
+            frame_tick => frame_tick,
             move_left  => btn2_db,
             move_right => btn3_db,
             frog_x     => frog_x
@@ -449,6 +453,7 @@ entity frog_motion is
     Port (
         clk        : in  STD_LOGIC;
         rst        : in  STD_LOGIC;
+        frame_tick : in  STD_LOGIC;
         move_left  : in  STD_LOGIC;
         move_right : in  STD_LOGIC;
         frog_x     : out unsigned(10 downto 0)
@@ -463,10 +468,6 @@ architecture Behavioral of frog_motion is
     constant START_X      : integer := 100;
     constant STEP_PX      : integer := 5;
 
-    -- 74.25 MHz / 1,237,500 = 60 Hz movement update rate
-    constant MOVE_TICK_MAX : integer := 1237500;
-
-    signal move_tick_counter : integer range 0 to MOVE_TICK_MAX - 1 := 0;
     signal frog_x_reg        : unsigned(10 downto 0) := to_unsigned(START_X, 11);
 begin
 
@@ -475,11 +476,9 @@ begin
     begin
         if rising_edge(clk) then
             if rst = '1' then
-                move_tick_counter <= 0;
                 frog_x_reg <= to_unsigned(START_X, 11);
             else
-                if move_tick_counter = MOVE_TICK_MAX - 1 then
-                    move_tick_counter <= 0;
+                if frame_tick = '1' then
                     x_next := to_integer(frog_x_reg);
 
                     if move_left = '1' and move_right = '0' then
@@ -495,8 +494,6 @@ begin
                     end if;
 
                     frog_x_reg <= to_unsigned(x_next, frog_x_reg'length);
-                else
-                    move_tick_counter <= move_tick_counter + 1;
                 end if;
             end if;
         end if;

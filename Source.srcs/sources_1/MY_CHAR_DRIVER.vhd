@@ -19,8 +19,7 @@
 
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
-use IEEE.STD_LOGIC_ARITH.ALL;       -- For unsigned()
-use IEEE.STD_LOGIC_UNSIGNED.ALL;
+use IEEE.NUMERIC_STD.ALL;
 
 -- Uncomment the following library declaration if using
 -- arithmetic functions with Signed or Unsigned values
@@ -40,17 +39,17 @@ architecture Behavioral of MY_CHAR_DRIVER is
     signal h_int : integer;
     signal v_int : integer;
 begin
-    h_int <= conv_integer(hcount);
-    v_int <= conv_integer(vcount);
+    h_int <= to_integer(unsigned(hcount));
+    v_int <= to_integer(unsigned(vcount));
 
     process(h_int, v_int)
         variable char_index : integer range 0 to 15;
     begin
-        -- 11 chars x 24 px = 264 px wide, 24 px high.
+        -- 11 chars x 8 px = 88 px wide, 8 px high.
         -- Active video starts at h=260, v=25; use equal 24 px padding from top-left.
-        -- Bounding box: x=[284,548), y=[49,73)
-        if (h_int >= 284 and h_int < 548) and (v_int >= 49 and v_int < 73) then
-            char_index := (h_int - 284) / 24; -- 24 pixels per character (8x3)
+        -- Bounding box: x=[284,372), y=[49,57)
+        if (h_int >= 284 and h_int < 372) and (v_int >= 49 and v_int < 57) then
+            char_index := (h_int - 284) / 8;
             case char_index is
                 when 0 => ASCII_CHAR <= "0000001"; -- 'F' (Index 1)
                 when 1 => ASCII_CHAR <= "0000010"; -- 'L' (Index 2)
