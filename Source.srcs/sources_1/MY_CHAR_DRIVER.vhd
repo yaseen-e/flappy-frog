@@ -19,8 +19,7 @@
 
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
-use IEEE.STD_LOGIC_ARITH.ALL;       -- For unsigned()
-use IEEE.STD_LOGIC_UNSIGNED.ALL;
+use IEEE.NUMERIC_STD.ALL;
 
 -- Uncomment the following library declaration if using
 -- arithmetic functions with Signed or Unsigned values
@@ -40,8 +39,8 @@ architecture Behavioral of MY_CHAR_DRIVER is
     signal h_int : integer;
     signal v_int : integer;
 begin
-    h_int <= conv_integer(hcount);
-    v_int <= conv_integer(vcount);
+    h_int <= to_integer(unsigned(hcount));
+    v_int <= to_integer(unsigned(vcount));
 
     process(h_int, v_int)
         variable char_index : integer range 0 to 15;
