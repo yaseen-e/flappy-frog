@@ -43,14 +43,11 @@ begin
     end process;
 
     -- C1: Next-state process (case statement)
-    process(current_state, platform_x, platform_width_px, disappear_pulse)
+    process(current_state, disappear_pulse)
     begin
         case current_state is
             when SHOWN =>
                 if disappear_pulse = '1' then
-                    next_state <= HIDDEN;
-                -- Once a platform has completely moved off the left side, hide it.
-                elsif (platform_x + platform_width_px) <= 0 then
                     next_state <= HIDDEN;
                 else
                     next_state <= SHOWN;

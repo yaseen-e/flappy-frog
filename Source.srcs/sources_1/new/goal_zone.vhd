@@ -16,10 +16,14 @@ entity goal_zone is
 end goal_zone;
 
 architecture Behavioral of goal_zone is
-    constant GOAL_WORLD_X_C : integer := 2460;
+    constant ACTIVE_WIDTH_C   : integer := 1280;
+    constant WORLD_WIDTH_C    : integer := 2600;
+    constant SCENE_X_MAX_C    : integer := WORLD_WIDTH_C - ACTIVE_WIDTH_C;
     constant GOAL_Y_C       : integer := 390;
     constant GOAL_WIDTH_C   : integer := 70;
     constant GOAL_HEIGHT_C  : integer := 170;
+    constant GOAL_SCREEN_X_AT_END_C : integer := (ACTIVE_WIDTH_C - GOAL_WIDTH_C) / 2;
+    constant GOAL_WORLD_X_C : integer := SCENE_X_MAX_C + GOAL_SCREEN_X_AT_END_C;
 
     signal goal_screen_x : integer;
 begin
