@@ -89,6 +89,11 @@ architecture Behavioral of FlappyFrog is
     signal btn2_db       : STD_LOGIC;
     signal btn3_db       : STD_LOGIC;
     signal frog_x        : unsigned(10 downto 0);
+    signal active_x      : integer;
+    signal active_y      : integer;
+    signal platform_1_on : STD_LOGIC;
+    signal platform_2_on : STD_LOGIC;
+    signal draw_platform : STD_LOGIC;
 
     -- -------------------------------------------------------------------------
     -- Component Declarations
@@ -191,6 +196,16 @@ architecture Behavioral of FlappyFrog is
         );
     end component;
 
+    component platform
+        Port (
+            pixel_x    : in  integer;
+            pixel_y    : in  integer;
+            platform_x : in  integer;
+            unit_size  : in  integer range 1 to 4;
+            pixel_on   : out STD_LOGIC
+        );
+    end component;
+
 begin
 
     -- Reset logic
@@ -200,6 +215,8 @@ begin
     -- Conversion from unsigned to std_logic_vector for submodules
     hcount_vec <= std_logic_vector(hcount(10 downto 0));
     vcount_vec <= std_logic_vector(vcount(10 downto 0));
+    active_x <= to_integer(hcount) - hbp_end;
+    active_y <= to_integer(vcount) - vbp_end;
 
     -- Keep button control signals in the pixel clock domain.
     process(pix_clk)
@@ -242,6 +259,26 @@ begin
             move_right => btn3_db,
             frog_x     => frog_x
         );
+
+    platform_1_inst : platform
+        Port Map (
+            pixel_x    => active_x,
+            pixel_y    => active_y,
+            platform_x => 220,
+            unit_size  => 4,
+            pixel_on   => platform_1_on
+        );
+
+    platform_2_inst : platform
+        Port Map (
+            pixel_x    => active_x,
+            pixel_y    => active_y,
+            platform_x => 520,
+            unit_size  => 2,
+            pixel_on   => platform_2_on
+        );
+
+    draw_platform <= '1' when vde = '1' and (platform_1_on = '1' or platform_2_on = '1') else '0';
 
     -- -------------------------------------------------------------------------
     -- Clocking Wizard Instantiation
@@ -336,6 +373,7 @@ begin
     -- -------------------------------------------------------------------------
     red <= x"00" when vde = '0' else
            frog_rom_data(11 downto 8) & frog_rom_data(11 downto 8) when draw_frog = '1' else
+            x"FF" when draw_platform = '1' else
            x"FF" when text_intensity = '1' else
            x"9F" when vcount >= 685 else
            x"7F" when vcount >= 665 else
@@ -344,6 +382,7 @@ begin
 
     green <= x"00" when vde = '0' else
              frog_rom_data(7 downto 4) & frog_rom_data(7 downto 4) when draw_frog = '1' else
+             x"FF" when draw_platform = '1' else
              x"FF" when text_intensity = '1' else
              x"DF" when vcount >= 685 else
              x"BF" when vcount >= 665 else
@@ -352,6 +391,7 @@ begin
 
     blue <= x"00" when vde = '0' else
             frog_rom_data(3 downto 0) & frog_rom_data(3 downto 0) when draw_frog = '1' else
+            x"FF" when draw_platform = '1' else
             x"FF" when text_intensity = '1' else
             x"FF" when vcount >= 685 else
             x"DF" when vcount >= 665 else
