@@ -128,8 +128,17 @@ architecture Behavioral of FlappyFrog is
 
     -- Collision and goal
     signal platform_support : STD_LOGIC;
+    signal support_mask     : STD_LOGIC_VECTOR(5 downto 0);
     signal platform_top_y   : integer;
     signal hit_goal         : STD_LOGIC;
+    signal jump_takeoff     : STD_LOGIC;
+
+    signal p1_disappear     : STD_LOGIC;
+    signal p2_disappear     : STD_LOGIC;
+    signal p3_disappear     : STD_LOGIC;
+    signal p4_disappear     : STD_LOGIC;
+    signal p5_disappear     : STD_LOGIC;
+    signal p6_disappear     : STD_LOGIC;
 
     signal goal_pixel_on    : STD_LOGIC;
     signal goal_world_x     : integer;
@@ -258,6 +267,7 @@ architecture Behavioral of FlappyFrog is
         Port (
             clk        : in  STD_LOGIC;
             rst        : in  STD_LOGIC;
+            disappear_pulse : in  STD_LOGIC;
             pixel_x    : in  integer;
             pixel_y    : in  integer;
             platform_x : in  integer;
@@ -314,6 +324,7 @@ architecture Behavioral of FlappyFrog is
             goal_width        : in  integer;
             goal_height       : in  integer;
             platform_support  : out STD_LOGIC;
+            support_mask      : out STD_LOGIC_VECTOR(5 downto 0);
             platform_top_y    : out integer;
             hit_goal          : out STD_LOGIC
         );
@@ -329,6 +340,7 @@ architecture Behavioral of FlappyFrog is
             frog_y           : out integer;
             frog_vy          : out integer;
             frog_state       : out STD_LOGIC_VECTOR(1 downto 0);
+            jump_takeoff     : out STD_LOGIC;
             fell_out         : out STD_LOGIC
         );
     end component;
@@ -389,6 +401,13 @@ begin
 
     move_left_cmd <= btn2_db when gameplay_enable = '1' else '0';
     move_right_cmd <= btn3_db when gameplay_enable = '1' else '0';
+
+    p1_disappear <= jump_takeoff and support_mask(0);
+    p2_disappear <= jump_takeoff and support_mask(1);
+    p3_disappear <= jump_takeoff and support_mask(2);
+    p4_disappear <= jump_takeoff and support_mask(3);
+    p5_disappear <= jump_takeoff and support_mask(4);
+    p6_disappear <= jump_takeoff and support_mask(5);
 
     -- Keep asynchronous button inputs inside pixel clock domain
     process(pix_clk)
@@ -512,6 +531,7 @@ begin
             goal_width        => goal_width,
             goal_height       => goal_height,
             platform_support  => platform_support,
+            support_mask      => support_mask,
             platform_top_y    => platform_top_y,
             hit_goal          => hit_goal
         );
@@ -526,6 +546,7 @@ begin
             frog_y           => frog_y,
             frog_vy          => frog_vy,
             frog_state       => frog_state,
+            jump_takeoff     => jump_takeoff,
             fell_out         => fell_out
         );
 
@@ -536,6 +557,7 @@ begin
         Port Map (
             clk        => pix_clk,
             rst        => game_reset,
+            disappear_pulse => p1_disappear,
             pixel_x    => active_x,
             pixel_y    => active_y,
             platform_x => p1_x_screen,
@@ -547,6 +569,7 @@ begin
         Port Map (
             clk        => pix_clk,
             rst        => game_reset,
+            disappear_pulse => p2_disappear,
             pixel_x    => active_x,
             pixel_y    => active_y,
             platform_x => p2_x_screen,
@@ -558,6 +581,7 @@ begin
         Port Map (
             clk        => pix_clk,
             rst        => game_reset,
+            disappear_pulse => p3_disappear,
             pixel_x    => active_x,
             pixel_y    => active_y,
             platform_x => p3_x_screen,
@@ -569,6 +593,7 @@ begin
         Port Map (
             clk        => pix_clk,
             rst        => game_reset,
+            disappear_pulse => p4_disappear,
             pixel_x    => active_x,
             pixel_y    => active_y,
             platform_x => p4_x_screen,
@@ -580,6 +605,7 @@ begin
         Port Map (
             clk        => pix_clk,
             rst        => game_reset,
+            disappear_pulse => p5_disappear,
             pixel_x    => active_x,
             pixel_y    => active_y,
             platform_x => p5_x_screen,
@@ -591,6 +617,7 @@ begin
         Port Map (
             clk        => pix_clk,
             rst        => game_reset,
+            disappear_pulse => p6_disappear,
             pixel_x    => active_x,
             pixel_y    => active_y,
             platform_x => p6_x_screen,

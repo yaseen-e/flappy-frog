@@ -26,6 +26,7 @@ entity collision_detector_fsm is
         goal_width        : in  integer;
         goal_height       : in  integer;
         platform_support  : out STD_LOGIC;
+        support_mask      : out STD_LOGIC_VECTOR(5 downto 0);
         platform_top_y    : out integer;
         hit_goal          : out STD_LOGIC
     );
@@ -50,9 +51,11 @@ begin
         variable overlap_x    : boolean;
         variable landing      : boolean;
         variable i            : integer;
+        variable support_mask_v : STD_LOGIC_VECTOR(5 downto 0);
     begin
         support_v := '0';
         top_y_v := PLATFORM_Y;
+        support_mask_v := (others => '0');
 
         p_x_arr(0) := p1_x;
         p_x_arr(1) := p2_x;
@@ -86,11 +89,13 @@ begin
                 if landing then
                     support_v := '1';
                     top_y_v := PLATFORM_Y;
+                    support_mask_v(i) := '1';
                 end if;
             end if;
         end loop;
 
         platform_support <= support_v;
+        support_mask <= support_mask_v;
         platform_top_y <= top_y_v;
     end process;
 

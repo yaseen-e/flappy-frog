@@ -6,6 +6,7 @@ entity platform is
     Port (
         clk        : in  STD_LOGIC;
         rst        : in  STD_LOGIC;
+        disappear_pulse : in  STD_LOGIC;
         pixel_x    : in  integer;
         pixel_y    : in  integer;
         platform_x : in  integer;
@@ -41,12 +42,14 @@ begin
     end process;
 
     -- C1: Next-state process (case statement)
-    process(current_state, platform_x, platform_width_px)
+    process(current_state, platform_x, platform_width_px, disappear_pulse)
     begin
         case current_state is
             when SHOWN =>
+                if disappear_pulse = '1' then
+                    next_state <= HIDDEN;
                 -- Once a platform has completely moved off the left side, hide it.
-                if (platform_x + platform_width_px) <= 0 then
+                elsif (platform_x + platform_width_px) <= 0 then
                     next_state <= HIDDEN;
                 else
                     next_state <= SHOWN;

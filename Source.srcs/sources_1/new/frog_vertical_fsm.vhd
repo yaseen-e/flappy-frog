@@ -12,6 +12,7 @@ entity frog_vertical_fsm is
         frog_y           : out integer;
         frog_vy          : out integer;
         frog_state       : out STD_LOGIC_VECTOR(1 downto 0);
+        jump_takeoff     : out STD_LOGIC;
         fell_out         : out STD_LOGIC
     );
 end frog_vertical_fsm;
@@ -21,32 +22,58 @@ architecture Behavioral of frog_vertical_fsm is
     constant FROG_HEIGHT     : integer := 90;
     constant START_Y         : integer := 200;
     constant JUMP_VEL        : integer := -14;
-    constant GRAVITY         : integer := 1;
-    constant MAX_FALL_SPEED  : integer := 12;
+    constant MAX_FALL_SPEED  : integer := 6;
     constant JUMP_PREP_TICKS : integer := 4;
+    constant ASCEND_GRAV_TICKS  : integer := 2;
+    constant DESCEND_GRAV_TICKS : integer := 3;
 
     type vstate_t is (FALLING, ON_PLATFORM, JUMPING);
     signal current_state : vstate_t := FALLING;
     signal y_reg         : integer := START_Y;
     signal vy_reg        : integer := 0;
     signal prep_counter  : integer range 0 to JUMP_PREP_TICKS := 0;
+    signal grav_counter  : integer range 0 to DESCEND_GRAV_TICKS := 0;
     signal fell_out_reg  : STD_LOGIC := '0';
+    signal jump_takeoff_reg : STD_LOGIC := '0';
 begin
     process(clk)
         variable vy_next : integer;
+        variable gravity_now : integer;
+        variable grav_ticks_target : integer;
+        variable apply_gravity : boolean;
     begin
         if rising_edge(clk) then
             fell_out_reg <= '0';
+            jump_takeoff_reg <= '0';
 
             if rst = '1' then
                 current_state <= FALLING;
                 y_reg <= START_Y;
                 vy_reg <= 0;
                 prep_counter <= 0;
+                grav_counter <= 0;
             elsif tick_en = '1' then
+                gravity_now := 1;
+                if vy_reg < 0 then
+                    grav_ticks_target := ASCEND_GRAV_TICKS;
+                else
+                    grav_ticks_target := DESCEND_GRAV_TICKS;
+                end if;
+
+                if grav_counter >= grav_ticks_target - 1 then
+                    apply_gravity := true;
+                    grav_counter <= 0;
+                else
+                    apply_gravity := false;
+                    grav_counter <= grav_counter + 1;
+                end if;
+
                 case current_state is
                     when FALLING =>
-                        vy_next := vy_reg + GRAVITY;
+                        vy_next := vy_reg;
+                        if apply_gravity then
+                            vy_next := vy_next + gravity_now;
+                        end if;
                         if vy_next > MAX_FALL_SPEED then
                             vy_next := MAX_FALL_SPEED;
                         end if;
@@ -64,6 +91,7 @@ begin
                             y_reg <= START_Y;
                             vy_reg <= 0;
                             prep_counter <= 0;
+                            grav_counter <= 0;
                             current_state <= FALLING;
                         end if;
 
@@ -77,13 +105,18 @@ begin
                         elsif prep_counter >= JUMP_PREP_TICKS then
                             vy_reg <= JUMP_VEL;
                             prep_counter <= 0;
+                            grav_counter <= 0;
+                            jump_takeoff_reg <= '1';
                             current_state <= JUMPING;
                         else
                             prep_counter <= prep_counter + 1;
                         end if;
 
                     when JUMPING =>
-                        vy_next := vy_reg + GRAVITY;
+                        vy_next := vy_reg;
+                        if apply_gravity then
+                            vy_next := vy_next + gravity_now;
+                        end if;
                         if vy_next > MAX_FALL_SPEED then
                             vy_next := MAX_FALL_SPEED;
                         end if;
@@ -100,6 +133,7 @@ begin
                         y_reg <= START_Y;
                         vy_reg <= 0;
                         prep_counter <= 0;
+                        grav_counter <= 0;
                 end case;
             end if;
         end if;
@@ -107,6 +141,7 @@ begin
 
     frog_y <= y_reg;
     frog_vy <= vy_reg;
+    jump_takeoff <= jump_takeoff_reg;
     fell_out <= fell_out_reg;
 
     with current_state select
