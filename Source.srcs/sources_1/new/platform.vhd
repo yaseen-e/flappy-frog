@@ -11,7 +11,8 @@ entity platform is
         pixel_y    : in  integer;
         platform_x : in  integer;
         unit_size  : in  integer range 1 to 4;
-        pixel_on   : out STD_LOGIC
+        pixel_on   : out STD_LOGIC;
+        platform_visible : out STD_LOGIC
     );
 end platform;
 
@@ -81,4 +82,6 @@ begin
                           pixel_x >= platform_x and pixel_x < platform_x + platform_width_px and
                           pixel_y >= PLATFORM_Y and pixel_y < PLATFORM_Y + PLATFORM_HEIGHT_PX)
               else '0';
+
+    platform_visible <= state_visible;
 end Behavioral;

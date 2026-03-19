@@ -21,10 +21,10 @@ architecture Behavioral of frog_vertical_fsm is
     constant SCREEN_HEIGHT   : integer := 720;
     constant FROG_HEIGHT     : integer := 90;
     constant START_Y         : integer := 200;
-    constant JUMP_VEL        : integer := -14;
+    constant JUMP_VEL        : integer := -22;
     constant MAX_FALL_SPEED  : integer := 6;
     constant JUMP_PREP_TICKS : integer := 4;
-    constant ASCEND_GRAV_TICKS  : integer := 2;
+    constant ASCEND_GRAV_TICKS  : integer := 3;
     constant DESCEND_GRAV_TICKS : integer := 3;
 
     type vstate_t is (FALLING, ON_PLATFORM, JUMPING);

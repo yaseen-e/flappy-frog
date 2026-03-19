@@ -124,6 +124,12 @@ architecture Behavioral of FlappyFrog is
     signal platform_4_on : STD_LOGIC;
     signal platform_5_on : STD_LOGIC;
     signal platform_6_on : STD_LOGIC;
+    signal p1_visible    : STD_LOGIC;
+    signal p2_visible    : STD_LOGIC;
+    signal p3_visible    : STD_LOGIC;
+    signal p4_visible    : STD_LOGIC;
+    signal p5_visible    : STD_LOGIC;
+    signal p6_visible    : STD_LOGIC;
     signal draw_platform : STD_LOGIC;
 
     -- Collision and goal
@@ -272,7 +278,8 @@ architecture Behavioral of FlappyFrog is
             pixel_y    : in  integer;
             platform_x : in  integer;
             unit_size  : in  integer range 1 to 4;
-            pixel_on   : out STD_LOGIC
+            pixel_on   : out STD_LOGIC;
+            platform_visible : out STD_LOGIC
         );
     end component;
 
@@ -309,16 +316,22 @@ architecture Behavioral of FlappyFrog is
             frog_height       : in  integer;
             p1_x              : in  integer;
             p1_unit           : in  integer range 1 to 4;
+            p1_active         : in  STD_LOGIC;
             p2_x              : in  integer;
             p2_unit           : in  integer range 1 to 4;
+            p2_active         : in  STD_LOGIC;
             p3_x              : in  integer;
             p3_unit           : in  integer range 1 to 4;
+            p3_active         : in  STD_LOGIC;
             p4_x              : in  integer;
             p4_unit           : in  integer range 1 to 4;
+            p4_active         : in  STD_LOGIC;
             p5_x              : in  integer;
             p5_unit           : in  integer range 1 to 4;
+            p5_active         : in  STD_LOGIC;
             p6_x              : in  integer;
             p6_unit           : in  integer range 1 to 4;
+            p6_active         : in  STD_LOGIC;
             goal_x            : in  integer;
             goal_y            : in  integer;
             goal_width        : in  integer;
@@ -516,16 +529,22 @@ begin
             frog_height       => FROG_HEIGHT,
             p1_x              => p1_world_x,
             p1_unit           => p1_unit,
+            p1_active         => p1_visible,
             p2_x              => p2_world_x,
             p2_unit           => p2_unit,
+            p2_active         => p2_visible,
             p3_x              => p3_world_x,
             p3_unit           => p3_unit,
+            p3_active         => p3_visible,
             p4_x              => p4_world_x,
             p4_unit           => p4_unit,
+            p4_active         => p4_visible,
             p5_x              => p5_world_x,
             p5_unit           => p5_unit,
+            p5_active         => p5_visible,
             p6_x              => p6_world_x,
             p6_unit           => p6_unit,
+            p6_active         => p6_visible,
             goal_x            => goal_world_x,
             goal_y            => goal_y,
             goal_width        => goal_width,
@@ -562,7 +581,8 @@ begin
             pixel_y    => active_y,
             platform_x => p1_x_screen,
             unit_size  => p1_unit,
-            pixel_on   => platform_1_on
+            pixel_on   => platform_1_on,
+            platform_visible => p1_visible
         );
 
     platform_2_inst : platform
@@ -574,7 +594,8 @@ begin
             pixel_y    => active_y,
             platform_x => p2_x_screen,
             unit_size  => p2_unit,
-            pixel_on   => platform_2_on
+            pixel_on   => platform_2_on,
+            platform_visible => p2_visible
         );
 
     platform_3_inst : platform
@@ -586,7 +607,8 @@ begin
             pixel_y    => active_y,
             platform_x => p3_x_screen,
             unit_size  => p3_unit,
-            pixel_on   => platform_3_on
+            pixel_on   => platform_3_on,
+            platform_visible => p3_visible
         );
 
     platform_4_inst : platform
@@ -598,7 +620,8 @@ begin
             pixel_y    => active_y,
             platform_x => p4_x_screen,
             unit_size  => p4_unit,
-            pixel_on   => platform_4_on
+            pixel_on   => platform_4_on,
+            platform_visible => p4_visible
         );
 
     platform_5_inst : platform
@@ -610,7 +633,8 @@ begin
             pixel_y    => active_y,
             platform_x => p5_x_screen,
             unit_size  => p5_unit,
-            pixel_on   => platform_5_on
+            pixel_on   => platform_5_on,
+            platform_visible => p5_visible
         );
 
     platform_6_inst : platform
@@ -622,7 +646,8 @@ begin
             pixel_y    => active_y,
             platform_x => p6_x_screen,
             unit_size  => p6_unit,
-            pixel_on   => platform_6_on
+            pixel_on   => platform_6_on,
+            platform_visible => p6_visible
         );
 
     draw_platform <= '1' when vde = '1' and

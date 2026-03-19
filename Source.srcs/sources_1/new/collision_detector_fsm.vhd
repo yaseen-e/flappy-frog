@@ -11,16 +11,22 @@ entity collision_detector_fsm is
         frog_height       : in  integer;
         p1_x              : in  integer;
         p1_unit           : in  integer range 1 to 4;
+        p1_active         : in  STD_LOGIC;
         p2_x              : in  integer;
         p2_unit           : in  integer range 1 to 4;
+        p2_active         : in  STD_LOGIC;
         p3_x              : in  integer;
         p3_unit           : in  integer range 1 to 4;
+        p3_active         : in  STD_LOGIC;
         p4_x              : in  integer;
         p4_unit           : in  integer range 1 to 4;
+        p4_active         : in  STD_LOGIC;
         p5_x              : in  integer;
         p5_unit           : in  integer range 1 to 4;
+        p5_active         : in  STD_LOGIC;
         p6_x              : in  integer;
         p6_unit           : in  integer range 1 to 4;
+        p6_active         : in  STD_LOGIC;
         goal_x            : in  integer;
         goal_y            : in  integer;
         goal_width        : in  integer;
@@ -38,18 +44,21 @@ architecture Behavioral of collision_detector_fsm is
     constant PLATFORM_UNIT_WIDTH : integer := 24;
 
     type int_array_6 is array (0 to 5) of integer;
+    type sl_array_6 is array (0 to 5) of STD_LOGIC;
 begin
     process(frog_world_x, frog_y, frog_vy, frog_width, frog_height,
-            p1_x, p1_unit, p2_x, p2_unit, p3_x, p3_unit,
-            p4_x, p4_unit, p5_x, p5_unit, p6_x, p6_unit)
+            p1_x, p1_unit, p1_active, p2_x, p2_unit, p2_active, p3_x, p3_unit, p3_active,
+            p4_x, p4_unit, p4_active, p5_x, p5_unit, p5_active, p6_x, p6_unit, p6_active)
         variable support_v    : STD_LOGIC;
         variable top_y_v      : integer;
         variable frog_bottom  : integer;
         variable next_bottom  : integer;
         variable p_x_arr      : int_array_6;
         variable p_width_arr  : int_array_6;
+        variable p_active_arr : sl_array_6;
         variable overlap_x    : boolean;
         variable landing      : boolean;
+        variable on_surface   : boolean;
         variable i            : integer;
         variable support_mask_v : STD_LOGIC_VECTOR(5 downto 0);
     begin
@@ -71,6 +80,13 @@ begin
         p_width_arr(4) := p5_unit * PLATFORM_UNIT_WIDTH;
         p_width_arr(5) := p6_unit * PLATFORM_UNIT_WIDTH;
 
+        p_active_arr(0) := p1_active;
+        p_active_arr(1) := p2_active;
+        p_active_arr(2) := p3_active;
+        p_active_arr(3) := p4_active;
+        p_active_arr(4) := p5_active;
+        p_active_arr(5) := p6_active;
+
         frog_bottom := frog_y + frog_height;
         if frog_vy > 0 then
             next_bottom := frog_bottom + frog_vy;
@@ -79,14 +95,23 @@ begin
         end if;
 
         for i in 0 to 5 loop
-            if support_v = '0' then
+            if p_active_arr(i) = '1' then
                 overlap_x := (frog_world_x + frog_width > p_x_arr(i)) and
                              (frog_world_x < p_x_arr(i) + p_width_arr(i));
+
+                on_surface := overlap_x and
+                              (frog_bottom >= PLATFORM_Y) and
+                              (frog_bottom <= PLATFORM_Y + PLATFORM_HEIGHT_PX);
+
+                if on_surface and support_mask_v = "000000" then
+                    support_mask_v(i) := '1';
+                end if;
+
                 landing := (frog_vy >= 0) and overlap_x and
                            (frog_bottom <= PLATFORM_Y + PLATFORM_HEIGHT_PX) and
                            (next_bottom >= PLATFORM_Y);
 
-                if landing then
+                if support_v = '0' and landing then
                     support_v := '1';
                     top_y_v := PLATFORM_Y;
                     support_mask_v(i) := '1';
