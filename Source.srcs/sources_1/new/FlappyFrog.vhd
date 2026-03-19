@@ -91,9 +91,15 @@ architecture Behavioral of FlappyFrog is
     signal frog_x        : unsigned(10 downto 0);
     signal active_x      : integer;
     signal active_y      : integer;
+    signal scene_x       : integer := 0;
+    signal platform_1_x  : integer;
+    signal platform_2_x  : integer;
     signal platform_1_on : STD_LOGIC;
     signal platform_2_on : STD_LOGIC;
     signal draw_platform : STD_LOGIC;
+
+    constant PLATFORM_1_WORLD_X : integer := 220;
+    constant PLATFORM_2_WORLD_X : integer := 520;
 
     -- -------------------------------------------------------------------------
     -- Component Declarations
@@ -198,6 +204,8 @@ architecture Behavioral of FlappyFrog is
 
     component platform
         Port (
+            clk        : in  STD_LOGIC;
+            rst        : in  STD_LOGIC;
             pixel_x    : in  integer;
             pixel_y    : in  integer;
             platform_x : in  integer;
@@ -217,6 +225,8 @@ begin
     vcount_vec <= std_logic_vector(vcount(10 downto 0));
     active_x <= to_integer(hcount) - hbp_end;
     active_y <= to_integer(vcount) - vbp_end;
+    platform_1_x <= PLATFORM_1_WORLD_X - scene_x;
+    platform_2_x <= PLATFORM_2_WORLD_X - scene_x;
 
     -- Keep button control signals in the pixel clock domain.
     process(pix_clk)
@@ -262,18 +272,22 @@ begin
 
     platform_1_inst : platform
         Port Map (
+            clk        => pix_clk,
+            rst        => pix_rst,
             pixel_x    => active_x,
             pixel_y    => active_y,
-            platform_x => 220,
+            platform_x => platform_1_x,
             unit_size  => 4,
             pixel_on   => platform_1_on
         );
 
     platform_2_inst : platform
         Port Map (
+            clk        => pix_clk,
+            rst        => pix_rst,
             pixel_x    => active_x,
             pixel_y    => active_y,
-            platform_x => 520,
+            platform_x => platform_2_x,
             unit_size  => 2,
             pixel_on   => platform_2_on
         );
