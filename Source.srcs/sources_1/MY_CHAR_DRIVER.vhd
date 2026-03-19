@@ -19,7 +19,8 @@
 
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
-use IEEE.NUMERIC_STD.ALL;
+use IEEE.STD_LOGIC_ARITH.ALL;       -- For unsigned()
+use IEEE.STD_LOGIC_UNSIGNED.ALL;
 
 -- Uncomment the following library declaration if using
 -- arithmetic functions with Signed or Unsigned values
@@ -39,17 +40,18 @@ architecture Behavioral of MY_CHAR_DRIVER is
     signal h_int : integer;
     signal v_int : integer;
 begin
-    h_int <= to_integer(unsigned(hcount));
-    v_int <= to_integer(unsigned(vcount));
+    h_int <= conv_integer(hcount);
+    v_int <= conv_integer(vcount);
 
     process(h_int, v_int)
         variable char_index : integer range 0 to 15;
     begin
-        -- 11 chars x 16 px = 176 px wide, 16 px high (2x scale).
-        -- Active video starts at h=260, v=25; use equal 24 px padding from top-left.
-        -- Bounding box: x=[284,460), y=[49,65)
-        if (h_int >= 284 and h_int < 460) and (v_int >= 49 and v_int < 65) then
-            char_index := (h_int - 284) / 16;
+        -- Check if we are inside the 264x24 bounding box (assuming 11 characters)
+        -- Width: 11 chars * 24 pixels = 264. Height: 1 char * 24 pixels = 24.
+        -- Bounding Box: Top-Right aligned with 50px padding from top and right.
+        -- Calculation: Start X (326) to End X (590) | Start Y (50) to End Y (74)
+            if (h_int >= 366 and h_int < 630) and (v_int >= 50 and v_int < 74) then
+            char_index := (h_int - 366) / 24; -- 24 pixels per character (8x3)
             case char_index is
                 when 0 => ASCII_CHAR <= "0000001"; -- 'F' (Index 1)
                 when 1 => ASCII_CHAR <= "0000010"; -- 'L' (Index 2)
