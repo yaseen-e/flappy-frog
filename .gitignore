@@ -1,0 +1,12 @@
+# Vivado temporary files
+*.log
+*.jou
+*.str
+.Xil/
+*.os/
+
+# Output files
+*.bit
+*.bin
+*.runs/
+*.gen/

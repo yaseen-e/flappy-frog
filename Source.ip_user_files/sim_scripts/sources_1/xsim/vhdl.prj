@@ -1,0 +1,5 @@
+vhdl xil_defaultlib  \
+"../../../../../../HDMIdemo2_char.gen/sources_1/ip/rom1kx8/rom1kx8_sim_netlist.vhdl" \
+
+# Do not sort compile order
+nosort
