@@ -7,6 +7,7 @@ entity frog_vertical_fsm is
         clk              : in  STD_LOGIC;
         rst              : in  STD_LOGIC;
         tick_en          : in  STD_LOGIC;
+        jump_release_enable : in  STD_LOGIC;
         platform_support : in  STD_LOGIC;
         platform_top_y   : in  integer;
         frog_y           : out integer;
@@ -102,14 +103,14 @@ begin
                         if platform_support = '0' then
                             current_state <= FALLING;
                             prep_counter <= 0;
-                        elsif prep_counter >= JUMP_PREP_TICKS then
+                        elsif jump_release_enable = '1' then
                             vy_reg <= JUMP_VEL;
                             prep_counter <= 0;
                             grav_counter <= 0;
                             jump_takeoff_reg <= '1';
                             current_state <= JUMPING;
                         else
-                            prep_counter <= prep_counter + 1;
+                            prep_counter <= 0;
                         end if;
 
                     when JUMPING =>

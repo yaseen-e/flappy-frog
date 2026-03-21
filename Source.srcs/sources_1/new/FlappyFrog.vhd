@@ -81,9 +81,13 @@ architecture Behavioral of FlappyFrog is
 
     signal frog_rom_addr : STD_LOGIC_VECTOR(15 downto 0);
     signal frog_rom_data : STD_LOGIC_VECTOR(11 downto 0);
+    signal goofy_rom_data : STD_LOGIC_VECTOR(11 downto 0);
+    signal frog_pixel_data : STD_LOGIC_VECTOR(11 downto 0);
     signal is_frog       : STD_LOGIC := '0';
     signal is_frog_delay : STD_LOGIC := '0';
     signal draw_frog     : STD_LOGIC;
+    signal use_goofy_sprite : STD_LOGIC;
+    signal jump_release_enable : STD_LOGIC;
 
     signal frog_x        : unsigned(11 downto 0);
     signal frog_world_x  : integer;
@@ -151,6 +155,7 @@ architecture Behavioral of FlappyFrog is
 
     -- Game flow control
     signal game_tick_pulse  : STD_LOGIC;
+    signal sprite_tick_pulse : STD_LOGIC;
     signal fell_out         : STD_LOGIC;
     signal gameplay_enable  : STD_LOGIC;
     signal soft_reset       : STD_LOGIC;
@@ -241,6 +246,14 @@ architecture Behavioral of FlappyFrog is
     end component;
 
     component blk_mem_gen_0
+        PORT (
+            clka  : IN STD_LOGIC;
+            addra : IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+            douta : OUT STD_LOGIC_VECTOR(11 DOWNTO 0)
+        );
+    end component;
+
+    component blk_mem_gen_1
         PORT (
             clka  : IN STD_LOGIC;
             addra : IN STD_LOGIC_VECTOR(15 DOWNTO 0);
@@ -339,6 +352,7 @@ architecture Behavioral of FlappyFrog is
             clk              : in  STD_LOGIC;
             rst              : in  STD_LOGIC;
             tick_en          : in  STD_LOGIC;
+            jump_release_enable : in  STD_LOGIC;
             platform_support : in  STD_LOGIC;
             platform_top_y   : in  integer;
             frog_y           : out integer;
@@ -346,6 +360,19 @@ architecture Behavioral of FlappyFrog is
             frog_state       : out STD_LOGIC_VECTOR(1 downto 0);
             jump_takeoff     : out STD_LOGIC;
             fell_out         : out STD_LOGIC
+        );
+    end component;
+
+    component frog_sprite_controller_fsm
+        Port (
+            clk                 : in  STD_LOGIC;
+            rst                 : in  STD_LOGIC;
+            tick_en             : in  STD_LOGIC;
+            platform_support    : in  STD_LOGIC;
+            frog_state          : in  STD_LOGIC_VECTOR(1 downto 0);
+            hit_goal            : in  STD_LOGIC;
+            use_goofy_sprite    : out STD_LOGIC;
+            jump_release_enable : out STD_LOGIC
         );
     end component;
 
@@ -484,6 +511,14 @@ begin
             tick_out => game_tick_pulse
         );
 
+    sprite_tick_inst : game_tick
+        Port Map (
+            clk      => pix_clk,
+            rst      => game_reset,
+            enable   => '1',
+            tick_out => sprite_tick_pulse
+        );
+
     frog_motion_inst : frog_motion
         Port Map (
             clk        => pix_clk,
@@ -562,6 +597,7 @@ begin
             clk              => pix_clk,
             rst              => game_reset,
             tick_en          => game_tick_pulse,
+            jump_release_enable => jump_release_enable,
             platform_support => platform_support,
             platform_top_y   => platform_top_y,
             frog_y           => frog_y,
@@ -569,6 +605,18 @@ begin
             frog_state       => frog_state,
             jump_takeoff     => jump_takeoff,
             fell_out         => fell_out
+        );
+
+    frog_sprite_ctrl_inst : frog_sprite_controller_fsm
+        Port Map (
+            clk                 => pix_clk,
+            rst                 => game_reset,
+            tick_en             => sprite_tick_pulse,
+            platform_support    => platform_support,
+            frog_state          => frog_state,
+            hit_goal            => hit_goal,
+            use_goofy_sprite    => use_goofy_sprite,
+            jump_release_enable => jump_release_enable
         );
 
     -- -------------------------------------------------------------------------
@@ -699,6 +747,13 @@ begin
         douta => frog_rom_data
       );
 
+        goofy_rom_inst : blk_mem_gen_1
+            PORT MAP (
+                clka  => pix_clk,
+                addra => frog_rom_addr,
+                douta => goofy_rom_data
+            );
+
     process(pix_clk)
         variable x_offset : integer;
         variable y_offset : integer;
@@ -725,13 +780,15 @@ begin
         end if;
     end process;
 
-    draw_frog <= '1' when is_frog_delay = '1' and frog_rom_data /= FROG_TRANSPARENT_COLOR else '0';
+    frog_pixel_data <= goofy_rom_data when use_goofy_sprite = '1' else frog_rom_data;
+
+    draw_frog <= '1' when is_frog_delay = '1' and frog_pixel_data /= FROG_TRANSPARENT_COLOR else '0';
 
     -- -------------------------------------------------------------------------
     -- Color logic
     -- -------------------------------------------------------------------------
     red <= x"00" when vde = '0' else
-           frog_rom_data(11 downto 8) & frog_rom_data(11 downto 8) when draw_frog = '1' else
+            frog_pixel_data(11 downto 8) & frog_pixel_data(11 downto 8) when draw_frog = '1' else
            x"00" when goal_pixel_on = '1' else
            x"FF" when draw_platform = '1' else
            x"FF" when text_intensity = '1' else
@@ -741,7 +798,7 @@ begin
            x"3F";
 
     green <= x"00" when vde = '0' else
-             frog_rom_data(7 downto 4) & frog_rom_data(7 downto 4) when draw_frog = '1' else
+             frog_pixel_data(7 downto 4) & frog_pixel_data(7 downto 4) when draw_frog = '1' else
              x"FF" when goal_pixel_on = '1' else
              x"FF" when draw_platform = '1' else
              x"FF" when text_intensity = '1' else
@@ -751,7 +808,7 @@ begin
              x"9F";
 
     blue <= x"00" when vde = '0' else
-            frog_rom_data(3 downto 0) & frog_rom_data(3 downto 0) when draw_frog = '1' else
+            frog_pixel_data(3 downto 0) & frog_pixel_data(3 downto 0) when draw_frog = '1' else
             x"00" when goal_pixel_on = '1' else
             x"FF" when draw_platform = '1' else
             x"FF" when text_intensity = '1' else
