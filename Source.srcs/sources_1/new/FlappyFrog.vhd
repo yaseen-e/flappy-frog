@@ -85,7 +85,7 @@ architecture Behavioral of FlappyFrog is
     signal is_frog_delay : STD_LOGIC := '0';
     signal draw_frog     : STD_LOGIC;
 
-    signal frog_x        : unsigned(10 downto 0);
+    signal frog_x        : unsigned(11 downto 0);
     signal frog_world_x  : integer;
     signal frog_draw_x   : integer;
     signal frog_y        : integer;
@@ -102,39 +102,34 @@ architecture Behavioral of FlappyFrog is
     signal p3_x_screen : integer;
     signal p4_x_screen : integer;
     signal p5_x_screen : integer;
-    signal p6_x_screen : integer;
 
     signal p1_world_x : integer;
     signal p2_world_x : integer;
     signal p3_world_x : integer;
     signal p4_world_x : integer;
     signal p5_world_x : integer;
-    signal p6_world_x : integer;
 
     signal p1_unit : integer range 1 to 4;
     signal p2_unit : integer range 1 to 4;
     signal p3_unit : integer range 1 to 4;
     signal p4_unit : integer range 1 to 4;
     signal p5_unit : integer range 1 to 4;
-    signal p6_unit : integer range 1 to 4;
 
     signal platform_1_on : STD_LOGIC;
     signal platform_2_on : STD_LOGIC;
     signal platform_3_on : STD_LOGIC;
     signal platform_4_on : STD_LOGIC;
     signal platform_5_on : STD_LOGIC;
-    signal platform_6_on : STD_LOGIC;
     signal p1_visible    : STD_LOGIC;
     signal p2_visible    : STD_LOGIC;
     signal p3_visible    : STD_LOGIC;
     signal p4_visible    : STD_LOGIC;
     signal p5_visible    : STD_LOGIC;
-    signal p6_visible    : STD_LOGIC;
     signal draw_platform : STD_LOGIC;
 
     -- Collision and goal
     signal platform_support : STD_LOGIC;
-    signal support_mask     : STD_LOGIC_VECTOR(5 downto 0);
+    signal support_mask     : STD_LOGIC_VECTOR(4 downto 0);
     signal platform_top_y   : integer;
     signal hit_goal         : STD_LOGIC;
     signal jump_takeoff     : STD_LOGIC;
@@ -144,7 +139,9 @@ architecture Behavioral of FlappyFrog is
     signal p3_disappear     : STD_LOGIC;
     signal p4_disappear     : STD_LOGIC;
     signal p5_disappear     : STD_LOGIC;
-    signal p6_disappear     : STD_LOGIC;
+    signal support_mask_latched : STD_LOGIC_VECTOR(4 downto 0) := (others => '0');
+    signal frog_state_prev      : STD_LOGIC_VECTOR(1 downto 0) := "00";
+    signal jump_state_enter     : STD_LOGIC;
 
     signal goal_pixel_on    : STD_LOGIC;
     signal goal_world_x     : integer;
@@ -265,7 +262,7 @@ architecture Behavioral of FlappyFrog is
             rst        : in  STD_LOGIC;
             move_left  : in  STD_LOGIC;
             move_right : in  STD_LOGIC;
-            frog_x     : out unsigned(10 downto 0)
+            frog_x     : out unsigned(11 downto 0)
         );
     end component;
 
@@ -291,19 +288,16 @@ architecture Behavioral of FlappyFrog is
             p3_x_screen  : out integer;
             p4_x_screen  : out integer;
             p5_x_screen  : out integer;
-            p6_x_screen  : out integer;
             p1_world_x   : out integer;
             p2_world_x   : out integer;
             p3_world_x   : out integer;
             p4_world_x   : out integer;
             p5_world_x   : out integer;
-            p6_world_x   : out integer;
             p1_unit      : out integer range 1 to 4;
             p2_unit      : out integer range 1 to 4;
             p3_unit      : out integer range 1 to 4;
             p4_unit      : out integer range 1 to 4;
-            p5_unit      : out integer range 1 to 4;
-            p6_unit      : out integer range 1 to 4
+            p5_unit      : out integer range 1 to 4
         );
     end component;
 
@@ -329,15 +323,12 @@ architecture Behavioral of FlappyFrog is
             p5_x              : in  integer;
             p5_unit           : in  integer range 1 to 4;
             p5_active         : in  STD_LOGIC;
-            p6_x              : in  integer;
-            p6_unit           : in  integer range 1 to 4;
-            p6_active         : in  STD_LOGIC;
             goal_x            : in  integer;
             goal_y            : in  integer;
             goal_width        : in  integer;
             goal_height       : in  integer;
             platform_support  : out STD_LOGIC;
-            support_mask      : out STD_LOGIC_VECTOR(5 downto 0);
+            support_mask      : out STD_LOGIC_VECTOR(4 downto 0);
             platform_top_y    : out integer;
             hit_goal          : out STD_LOGIC
         );
@@ -415,12 +406,13 @@ begin
     move_left_cmd <= btn2_db when gameplay_enable = '1' else '0';
     move_right_cmd <= btn3_db when gameplay_enable = '1' else '0';
 
-    p1_disappear <= jump_takeoff and support_mask(0);
-    p2_disappear <= jump_takeoff and support_mask(1);
-    p3_disappear <= jump_takeoff and support_mask(2);
-    p4_disappear <= jump_takeoff and support_mask(3);
-    p5_disappear <= jump_takeoff and support_mask(4);
-    p6_disappear <= jump_takeoff and support_mask(5);
+    jump_state_enter <= '1' when (frog_state_prev /= "10" and frog_state = "10") else '0';
+
+    p1_disappear <= jump_state_enter and support_mask_latched(0);
+    p2_disappear <= jump_state_enter and support_mask_latched(1);
+    p3_disappear <= jump_state_enter and support_mask_latched(2);
+    p4_disappear <= jump_state_enter and support_mask_latched(3);
+    p5_disappear <= jump_state_enter and support_mask_latched(4);
 
     -- Keep asynchronous button inputs inside pixel clock domain
     process(pix_clk)
@@ -436,6 +428,22 @@ begin
                 btn2_sync_2 <= btn2_sync_1;
                 btn3_sync_1 <= btn3;
                 btn3_sync_2 <= btn3_sync_1;
+            end if;
+        end if;
+    end process;
+
+    -- Latch the currently supported platform while standing, then consume it on jump entry.
+    process(pix_clk)
+    begin
+        if rising_edge(pix_clk) then
+            if game_reset = '1' then
+                frog_state_prev <= "00";
+                support_mask_latched <= (others => '0');
+            else
+                frog_state_prev <= frog_state;
+                if frog_state = "01" and platform_support = '1' then
+                    support_mask_latched <= support_mask;
+                end if;
             end if;
         end if;
     end process;
@@ -493,19 +501,16 @@ begin
             p3_x_screen  => p3_x_screen,
             p4_x_screen  => p4_x_screen,
             p5_x_screen  => p5_x_screen,
-            p6_x_screen  => p6_x_screen,
             p1_world_x   => p1_world_x,
             p2_world_x   => p2_world_x,
             p3_world_x   => p3_world_x,
             p4_world_x   => p4_world_x,
             p5_world_x   => p5_world_x,
-            p6_world_x   => p6_world_x,
             p1_unit      => p1_unit,
             p2_unit      => p2_unit,
             p3_unit      => p3_unit,
             p4_unit      => p4_unit,
-            p5_unit      => p5_unit,
-            p6_unit      => p6_unit
+            p5_unit      => p5_unit
         );
 
     goal_zone_inst : goal_zone
@@ -542,9 +547,6 @@ begin
             p5_x              => p5_world_x,
             p5_unit           => p5_unit,
             p5_active         => p5_visible,
-            p6_x              => p6_world_x,
-            p6_unit           => p6_unit,
-            p6_active         => p6_visible,
             goal_x            => goal_world_x,
             goal_y            => goal_y,
             goal_width        => goal_width,
@@ -637,23 +639,10 @@ begin
             platform_visible => p5_visible
         );
 
-    platform_6_inst : platform
-        Port Map (
-            clk        => pix_clk,
-            rst        => game_reset,
-            disappear_pulse => p6_disappear,
-            pixel_x    => active_x,
-            pixel_y    => active_y,
-            platform_x => p6_x_screen,
-            unit_size  => p6_unit,
-            pixel_on   => platform_6_on,
-            platform_visible => p6_visible
-        );
-
     draw_platform <= '1' when vde = '1' and
                               (platform_1_on = '1' or platform_2_on = '1' or
                                platform_3_on = '1' or platform_4_on = '1' or
-                               platform_5_on = '1' or platform_6_on = '1')
+                               platform_5_on = '1')
                      else '0';
 
     -- -------------------------------------------------------------------------

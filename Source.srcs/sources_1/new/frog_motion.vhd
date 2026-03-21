@@ -29,7 +29,7 @@ entity frog_motion is
 		rst        : in  STD_LOGIC;
 		move_left  : in  STD_LOGIC;
 		move_right : in  STD_LOGIC;
-		frog_x     : out unsigned(10 downto 0)
+		frog_x     : out unsigned(11 downto 0)
 	);
 end frog_motion;
 
@@ -45,7 +45,7 @@ architecture Behavioral of frog_motion is
 	constant MOVE_TICK_MAX : integer := 1237500;
 
 	signal move_tick_counter : integer range 0 to MOVE_TICK_MAX - 1 := 0;
-	signal frog_x_reg        : unsigned(10 downto 0) := to_unsigned(START_X, 11);
+	signal frog_x_reg        : unsigned(11 downto 0) := to_unsigned(START_X, 12);
 begin
 
 	process(clk)
@@ -54,7 +54,7 @@ begin
 		if rising_edge(clk) then
 			if rst = '1' then
 				move_tick_counter <= 0;
-				frog_x_reg <= to_unsigned(START_X, 11);
+				frog_x_reg <= to_unsigned(START_X, 12);
 			else
 				if move_tick_counter = MOVE_TICK_MAX - 1 then
 					move_tick_counter <= 0;
