@@ -39,7 +39,7 @@ architecture Behavioral of collision_detector_fsm is
     constant PLATFORM_Y          : integer := 500;
     constant PLATFORM_HEIGHT_PX  : integer := 18;
     constant PLATFORM_UNIT_WIDTH : integer := 24;
-    constant FOOT_COLLISION_HEIGHT : integer := 14;
+    constant FROG_COLLISION_WIDTH : integer := 30;
 
     type int_array_5 is array (0 to 4) of integer;
     type sl_array_5 is array (0 to 4) of STD_LOGIC;
@@ -49,9 +49,10 @@ begin
             p4_x, p4_unit, p4_active, p5_x, p5_unit, p5_active)
         variable support_v    : STD_LOGIC;
         variable top_y_v      : integer;
-        variable frog_foot_top    : integer;
-        variable frog_foot_bottom : integer;
-        variable next_foot_bottom : integer;
+        variable frog_bottom       : integer;
+        variable next_bottom       : integer;
+        variable frog_mid_left_x   : integer;
+        variable frog_mid_right_x  : integer;
         variable p_x_arr      : int_array_5;
         variable p_width_arr  : int_array_5;
         variable p_active_arr : sl_array_5;
@@ -83,35 +84,32 @@ begin
         p_active_arr(3) := p4_active;
         p_active_arr(4) := p5_active;
 
-        frog_foot_bottom := frog_y + frog_height;
-        frog_foot_top := frog_foot_bottom - FOOT_COLLISION_HEIGHT;
-
-        if frog_foot_top < frog_y then
-            frog_foot_top := frog_y;
-        end if;
+        frog_bottom := frog_y + frog_height;
+        frog_mid_left_x := frog_world_x + (frog_width - FROG_COLLISION_WIDTH) / 2;
+        frog_mid_right_x := frog_mid_left_x + FROG_COLLISION_WIDTH;
 
         if frog_vy > 0 then
-            next_foot_bottom := frog_foot_bottom + frog_vy;
+            next_bottom := frog_bottom + frog_vy;
         else
-            next_foot_bottom := frog_foot_bottom;
+            next_bottom := frog_bottom;
         end if;
 
         for i in 0 to 4 loop
             if p_active_arr(i) = '1' then
-                overlap_x := (frog_world_x + frog_width > p_x_arr(i)) and
-                             (frog_world_x < p_x_arr(i) + p_width_arr(i));
+                overlap_x := (frog_mid_right_x > p_x_arr(i)) and
+                             (frog_mid_left_x < p_x_arr(i) + p_width_arr(i));
 
                 on_surface := overlap_x and
-                              (frog_foot_bottom >= PLATFORM_Y) and
-                              (frog_foot_top <= PLATFORM_Y + PLATFORM_HEIGHT_PX);
+                              (frog_bottom >= PLATFORM_Y) and
+                              (frog_bottom <= PLATFORM_Y + PLATFORM_HEIGHT_PX);
 
                 if on_surface and support_mask_v = "00000" then
                     support_mask_v(i) := '1';
                 end if;
 
                 landing := (frog_vy >= 0) and overlap_x and
-                           (frog_foot_bottom <= PLATFORM_Y + PLATFORM_HEIGHT_PX) and
-                           (next_foot_bottom >= PLATFORM_Y);
+                           (frog_bottom <= PLATFORM_Y + PLATFORM_HEIGHT_PX) and
+                           (next_bottom >= PLATFORM_Y);
 
                 if support_v = '0' and landing then
                     support_v := '1';
@@ -126,8 +124,8 @@ begin
         platform_top_y <= top_y_v;
     end process;
 
-    hit_goal <= '1' when (frog_world_x < goal_x + goal_width and
-                          frog_world_x + frog_width > goal_x and
+    hit_goal <= '1' when ((frog_world_x + (frog_width + FROG_COLLISION_WIDTH) / 2) > goal_x and
+                          (frog_world_x + (frog_width - FROG_COLLISION_WIDTH) / 2) < goal_x + goal_width and
                           frog_y < goal_y + goal_height and
                           frog_y + frog_height > goal_y)
                else '0';
