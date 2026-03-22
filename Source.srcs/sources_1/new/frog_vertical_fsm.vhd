@@ -24,19 +24,22 @@ architecture Behavioral of frog_vertical_fsm is
     constant START_Y         : integer := 200;
     constant JUMP_VEL        : integer := -15;
     constant MAX_FALL_SPEED  : integer := 6;
-    constant JUMP_PREP_TICKS : integer := 4;
     constant ASCEND_GRAV_TICKS  : integer := 2;
     constant DESCEND_GRAV_TICKS : integer := 2;
+
+    constant FROG_STATE_FALLING     : STD_LOGIC_VECTOR(1 downto 0) := "00";
+    constant FROG_STATE_ON_PLATFORM : STD_LOGIC_VECTOR(1 downto 0) := "01";
+    constant FROG_STATE_JUMPING     : STD_LOGIC_VECTOR(1 downto 0) := "10";
 
     type vstate_t is (FALLING, ON_PLATFORM, JUMPING);
     signal current_state : vstate_t := FALLING;
     signal y_reg         : integer := START_Y;
     signal vy_reg        : integer := 0;
-    signal prep_counter  : integer range 0 to JUMP_PREP_TICKS := 0;
     signal grav_counter  : integer range 0 to DESCEND_GRAV_TICKS := 0;
     signal fell_out_reg  : STD_LOGIC := '0';
     signal jump_takeoff_reg : STD_LOGIC := '0';
 begin
+    -- 60 Hz physics update with FSM-based vertical motion.
     process(clk)
         variable vy_next : integer;
         variable gravity_now : integer;
@@ -51,7 +54,6 @@ begin
                 current_state <= FALLING;
                 y_reg <= START_Y;
                 vy_reg <= 0;
-                prep_counter <= 0;
                 grav_counter <= 0;
             elsif tick_en = '1' then
                 gravity_now := 1;
@@ -85,13 +87,11 @@ begin
                         if platform_support = '1' and vy_next >= 0 then
                             y_reg <= platform_top_y - FROG_HEIGHT;
                             vy_reg <= 0;
-                            prep_counter <= 0;
                             current_state <= ON_PLATFORM;
                         elsif y_reg >= (SCREEN_HEIGHT - FROG_HEIGHT) then
                             fell_out_reg <= '1';
                             y_reg <= START_Y;
                             vy_reg <= 0;
-                            prep_counter <= 0;
                             grav_counter <= 0;
                             current_state <= FALLING;
                         end if;
@@ -102,15 +102,11 @@ begin
 
                         if platform_support = '0' then
                             current_state <= FALLING;
-                            prep_counter <= 0;
                         elsif jump_release_enable = '1' then
                             vy_reg <= JUMP_VEL;
-                            prep_counter <= 0;
                             grav_counter <= 0;
                             jump_takeoff_reg <= '1';
                             current_state <= JUMPING;
-                        else
-                            prep_counter <= 0;
                         end if;
 
                     when JUMPING =>
@@ -133,7 +129,6 @@ begin
                         current_state <= FALLING;
                         y_reg <= START_Y;
                         vy_reg <= 0;
-                        prep_counter <= 0;
                         grav_counter <= 0;
                 end case;
             end if;
@@ -146,8 +141,8 @@ begin
     fell_out <= fell_out_reg;
 
     with current_state select
-        frog_state <= "00" when FALLING,
-                      "01" when ON_PLATFORM,
-                      "10" when JUMPING,
-                      "00" when others;
+        frog_state <= FROG_STATE_FALLING when FALLING,
+                      FROG_STATE_ON_PLATFORM when ON_PLATFORM,
+                      FROG_STATE_JUMPING when JUMPING,
+                      FROG_STATE_FALLING when others;
 end Behavioral;

@@ -18,6 +18,7 @@ architecture Behavioral of game_tick is
     signal tick_counter : integer range 0 to TICK_MAX - 1 := 0;
     signal tick_reg     : STD_LOGIC := '0';
 begin
+    -- Emits a one-cycle pulse on tick_out when enabled.
     process(clk)
     begin
         if rising_edge(clk) then

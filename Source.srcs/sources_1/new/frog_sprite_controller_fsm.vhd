@@ -19,6 +19,7 @@ end frog_sprite_controller_fsm;
 architecture Behavioral of frog_sprite_controller_fsm is
 	constant DELAY_TICKS      : integer := 15;
 	constant GOAL_TOGGLE_MAX  : integer := 10;
+	constant FROG_STATE_ON_PLATFORM : STD_LOGIC_VECTOR(1 downto 0) := "01";
 
 	type state_t is (SC_NORMAL, SC_PREJUMP_DELAY, SC_WAIT_JUMP_START, SC_GOAL_CYCLE, SC_GOAL_HOLD);
 
@@ -29,6 +30,7 @@ architecture Behavioral of frog_sprite_controller_fsm is
 	signal jump_release_reg   : STD_LOGIC := '0';
 
 begin
+	-- Controls jump-release delay and post-goal sprite alternation policy.
 	process(clk)
 	begin
 		if rising_edge(clk) then
@@ -49,7 +51,7 @@ begin
 						if hit_goal = '1' then
 							current_state <= SC_GOAL_CYCLE;
 							use_goofy_reg <= '1';
-						elsif frog_state = "01" and platform_support = '1' then
+						elsif frog_state = FROG_STATE_ON_PLATFORM and platform_support = '1' then
 							current_state <= SC_PREJUMP_DELAY;
 							use_goofy_reg <= '1';
 						end if;
@@ -63,7 +65,7 @@ begin
 							delay_counter <= 0;
 							goal_toggle_count <= 0;
 							use_goofy_reg <= '1';
-						elsif frog_state /= "01" or platform_support = '0' then
+						elsif frog_state /= FROG_STATE_ON_PLATFORM or platform_support = '0' then
 							current_state <= SC_NORMAL;
 							use_goofy_reg <= '0';
 							delay_counter <= 0;
@@ -85,7 +87,7 @@ begin
 							goal_toggle_count <= 0;
 							use_goofy_reg <= '1';
 							jump_release_reg <= '0';
-						elsif frog_state /= "01" or platform_support = '0' then
+						elsif frog_state /= FROG_STATE_ON_PLATFORM or platform_support = '0' then
 							current_state <= SC_NORMAL;
 							jump_release_reg <= '0';
 						else

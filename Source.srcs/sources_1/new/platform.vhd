@@ -17,7 +17,7 @@ entity platform is
 end platform;
 
 architecture Behavioral of platform is
-    -- Shared platform geometry constants (active-video coordinates)
+    -- Platform geometry in active-video coordinates.
     constant PLATFORM_Y          : integer := 500;
     constant PLATFORM_HEIGHT_PX  : integer := 18;
     constant PLATFORM_UNIT_WIDTH : integer := 24;
@@ -30,7 +30,7 @@ architecture Behavioral of platform is
 begin
     platform_width_px <= unit_size * PLATFORM_UNIT_WIDTH;
 
-    -- C0: State register process
+    -- State register
     process(clk)
     begin
         if rising_edge(clk) then
@@ -42,7 +42,7 @@ begin
         end if;
     end process;
 
-    -- C1: Next-state process (case statement)
+    -- Next-state logic
     process(current_state, disappear_pulse)
     begin
         case current_state is
@@ -61,7 +61,7 @@ begin
         end case;
     end process;
 
-    -- C2: Moore output process (state only)
+    -- Moore output logic
     process(current_state)
     begin
         case current_state is

@@ -14,11 +14,12 @@ entity game_state_fsm is
 end game_state_fsm;
 
 architecture Behavioral of game_state_fsm is
+    -- GS_SOFT_RESET is a single-cycle state used to pulse soft_reset.
     type game_state_t is (GS_RUNNING, GS_SOFT_RESET, GS_WIN_PAUSE);
     signal current_state : game_state_t := GS_RUNNING;
     signal next_state    : game_state_t := GS_RUNNING;
 begin
-    -- C0: State register
+    -- State register
     process(clk)
     begin
         if rising_edge(clk) then
@@ -30,7 +31,7 @@ begin
         end if;
     end process;
 
-    -- C1: Next-state logic
+    -- Next-state logic
     process(current_state, fell_out, hit_goal)
     begin
         case current_state is
@@ -54,7 +55,7 @@ begin
         end case;
     end process;
 
-    -- C2: Moore outputs
+    -- Moore outputs
     process(current_state)
     begin
         gameplay_enable <= '0';

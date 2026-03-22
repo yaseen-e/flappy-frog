@@ -81,6 +81,7 @@ architecture Behavioral of FlappyFrog is
     constant FROG_HEIGHT : integer := 90;
     constant FROG_TRANSPARENT_COLOR : STD_LOGIC_VECTOR(11 downto 0) := "111111111111";
     constant FROG_LOCK_X : integer := (ACTIVE_WIDTH / 2) - (FROG_WIDTH / 2);
+    constant FROG_STATE_JUMPING : STD_LOGIC_VECTOR(1 downto 0) := "10";
 
     signal frog_rom_addr : STD_LOGIC_VECTOR(15 downto 0);
     signal frog_rom_data : STD_LOGIC_VECTOR(11 downto 0);
@@ -440,7 +441,7 @@ begin
     move_left_cmd <= btn2_db when gameplay_enable = '1' else '0';
     move_right_cmd <= btn3_db when gameplay_enable = '1' else '0';
 
-    jump_state_enter <= '1' when (frog_state_prev /= "10" and frog_state = "10") else '0';
+    jump_state_enter <= '1' when (frog_state_prev /= FROG_STATE_JUMPING and frog_state = FROG_STATE_JUMPING) else '0';
 
     p1_disappear <= jump_state_enter and support_mask_latched(0);
     p2_disappear <= jump_state_enter and support_mask_latched(1);
@@ -745,21 +746,21 @@ begin
                        vcount >= vbp_end and vcount < vfp_begin) else '0';
 
     -- -------------------------------------------------------------------------
-    -- Frog ROM and address calculation
+    -- Frog sprite ROM read path and pixel hit/address generation
     -- -------------------------------------------------------------------------
     frog_rom_inst : blk_mem_gen_0
-      PORT MAP (
-        clka  => pix_clk,
-        addra => frog_rom_addr,
-        douta => frog_rom_data
-      );
+        PORT MAP (
+            clka  => pix_clk,
+            addra => frog_rom_addr,
+            douta => frog_rom_data
+        );
 
-        goofy_rom_inst : blk_mem_gen_1
-            PORT MAP (
-                clka  => pix_clk,
-                addra => frog_rom_addr,
-                douta => goofy_rom_data
-            );
+    goofy_rom_inst : blk_mem_gen_1
+        PORT MAP (
+            clka  => pix_clk,
+            addra => frog_rom_addr,
+            douta => goofy_rom_data
+        );
 
     process(pix_clk)
         variable x_offset : integer;
@@ -787,6 +788,7 @@ begin
         end if;
     end process;
 
+    -- Select active sprite source (normal or goofy variant).
     frog_pixel_data <= goofy_rom_data when use_goofy_sprite = '1' else frog_rom_data;
 
     draw_frog <= '1' when is_frog_delay = '1' and frog_pixel_data /= FROG_TRANSPARENT_COLOR else '0';

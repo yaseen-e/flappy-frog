@@ -36,14 +36,18 @@ entity collision_detector_fsm is
 end collision_detector_fsm;
 
 architecture Behavioral of collision_detector_fsm is
+    -- Shared platform geometry.
     constant PLATFORM_Y          : integer := 500;
     constant PLATFORM_HEIGHT_PX  : integer := 18;
     constant PLATFORM_UNIT_WIDTH : integer := 24;
+
+    -- Narrow horizontal band used for frog/platform and frog/goal checks.
     constant FROG_COLLISION_WIDTH : integer := 30;
 
     type int_array_5 is array (0 to 4) of integer;
     type sl_array_5 is array (0 to 4) of STD_LOGIC;
 begin
+    -- Detect platform support and identify which platform is currently supporting the frog.
     process(frog_world_x, frog_y, frog_vy, frog_width, frog_height,
             p1_x, p1_unit, p1_active, p2_x, p2_unit, p2_active, p3_x, p3_unit, p3_active,
             p4_x, p4_unit, p4_active, p5_x, p5_unit, p5_active)
@@ -124,6 +128,7 @@ begin
         platform_top_y <= top_y_v;
     end process;
 
+    -- Goal collision uses the same centered horizontal collision band.
     hit_goal <= '1' when ((frog_world_x + (frog_width + FROG_COLLISION_WIDTH) / 2) > goal_x and
                           (frog_world_x + (frog_width - FROG_COLLISION_WIDTH) / 2) < goal_x + goal_width and
                           frog_y < goal_y + goal_height and

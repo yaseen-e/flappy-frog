@@ -1,24 +1,3 @@
-----------------------------------------------------------------------------------
--- Company: 
--- Engineer: 
--- 
--- Create Date: 03/19/2026 10:17:57 AM
--- Design Name: 
--- Module Name: frog_motion - Behavioral
--- Project Name: 
--- Target Devices: 
--- Tool Versions: 
--- Description: 
--- 
--- Dependencies: 
--- 
--- Revision:
--- Revision 0.01 - File Created
--- Additional Comments:
--- 
-----------------------------------------------------------------------------------
-
-
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
@@ -34,6 +13,7 @@ entity frog_motion is
 end frog_motion;
 
 architecture Behavioral of frog_motion is
+	-- World-space horizontal movement model for the frog.
 	constant SCREEN_WIDTH : integer := 2600;
 	constant FROG_WIDTH   : integer := 90;
 	constant MIN_X        : integer := 0;
@@ -41,13 +21,14 @@ architecture Behavioral of frog_motion is
 	constant START_X      : integer := 100;
 	constant STEP_PX      : integer := 5;
 
-	-- 74.25 MHz / 1,237,500 ~= 60 Hz update rate
+	-- 74.25 MHz / 1,237,500 ~= 60 Hz update cadence
 	constant MOVE_TICK_MAX : integer := 1237500;
 
 	signal move_tick_counter : integer range 0 to MOVE_TICK_MAX - 1 := 0;
 	signal frog_x_reg        : unsigned(11 downto 0) := to_unsigned(START_X, 12);
 begin
 
+	-- Applies one movement step per tick and clamps to world bounds.
 	process(clk)
 		variable x_next : integer;
 	begin
