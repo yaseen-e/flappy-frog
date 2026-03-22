@@ -56,5 +56,5 @@ set_property -dict { PACKAGE_PIN T15 IOSTANDARD TMDS_33 } [get_ports {TMDS_DATA_
 set_property -dict { PACKAGE_PIN R16 IOSTANDARD TMDS_33 } [get_ports {TMDS_DATA_P[1]}] 
 set_property -dict { PACKAGE_PIN R17 IOSTANDARD TMDS_33 } [get_ports {TMDS_DATA_N[1]}] 
 
-set_property -dict { PACKAGE_PIN P15 IOSTANDARD TMDS_33 } [get_ports {TMDS_DATA_P[2]}] 
-set_property -dict { PACKAGE_PIN P16 IOSTANDARD TMDS_33 } [get_ports {TMDS_DATA_N[2]}]
+set_property -dict { PACKAGE_PIN P16 IOSTANDARD TMDS_33 } [get_ports {TMDS_DATA_P[2]}] 
+set_property -dict { PACKAGE_PIN P15 IOSTANDARD TMDS_33 } [get_ports {TMDS_DATA_N[2]}]

@@ -1,0 +1,219 @@
+
+Flappy Frog (FPGA / VHDL) — Module Overview & Design Notes
+===========================================================
+
+High-level approach
+-------------------
+This project is built as a set of small, single-purpose VHDL modules that are wired together in a top-level integration file. The key design choices are:
+
+1) Separate “control/gameplay” logic from “rendering” logic
+	- Gameplay/control runs on a slow, human-scale tick (~60 Hz) derived from the pixel clock.
+	- Rendering runs continuously at the pixel clock rate using the current game state.
+
+2) Use world-space coordinates for gameplay, and derive screen-space coordinates via a camera/scroll value.
+	- World X: 0..(WORLD_WIDTH_PX-1)
+	- Screen X: world_x - scene_x
+
+3) Implement time delays using counters and tick pulses, not blocking statements.
+	- This is critical in synthesizable hardware: “waiting” would stall an always-on pipeline.
+
+
+Timing / “clicks” logic (clock cycles) and non-blocking delays
+-------------------------------------------------------------
+In hardware, everything happens concurrently. The main clock in this design is the pixel clock (pix_clk, ~74.25 MHz for 720p). A “click” can be thought of as one rising edge of pix_clk.
+
+To create human-scale timing (movement/physics/sprite delays), the project uses a tick generator that divides the fast clock down to ~60 Hz.
+
+How the 60 Hz tick is generated:
+- game_tick.vhd counts pix_clk edges up to TICK_MAX = 1,237,500.
+- When the counter reaches TICK_MAX-1, it emits tick_out = '1' for exactly 1 pix_clk cycle.
+- 74.25e6 / 1,237,500 = 60 Hz (approximately).
+
+How 0.25s delays are created (example: sprite delay):
+- 0.25 seconds at 60 Hz is 15 ticks.
+- frog_sprite_controller_fsm.vhd uses DELAY_TICKS = 15.
+- It increments a small counter only when tick_en = '1'. When the counter reaches 14, it transitions states.
+
+Why this does NOT freeze the game:
+- The counter-based delay is non-blocking: it is just state stored in flip-flops.
+- While the delay counter is incrementing (once per 60 Hz tick), other modules still run every clock:
+  - video timing continues,
+  - rendering continues,
+  - other FSMs continue,
+  - inputs continue to be sampled.
+
+Why using wait is different:
+- A wait statement (or any “blocking” concept) would conceptually pause progression of a process.
+- That works in testbenches, but is generally not used in synchronous, synthesizable datapaths for timing delays.
+- This project instead uses “counted time” (ticks/counters) to make delays deterministic and synthesizable.
+
+
+Module-by-module descriptions (VHD in Source.srcs/sources_1/new)
+---------------------------------------------------------------
+
+1) FlappyFrog.vhd (top-level integration)
+	Purpose:
+	- Wires together clocking, HDMI timing, game FSMs, collision, platform rendering, sprite ROM access, and I/O.
+
+	Key responsibilities:
+	- Video timing: maintains hcount/vcount counters and generates hsync/vsync and vde (video data enable).
+	- Active-area coordinates: active_x = hcount - hbp_end, active_y = vcount - vbp_end.
+	- Camera/scroll (scene_x): keeps the frog centered until the world edges clamp the camera.
+	- World→screen mapping: frog_draw_x = frog_world_x - scene_x.
+	- Instantiates:
+	  - clk_wiz_0 for pix_clk and pix_clkx5
+	  - hdmi_tx_v1_0 for TMDS output
+	  - game_tick (for gameplay and sprite timing)
+	  - frog_motion (horizontal)
+	  - frog_vertical_fsm (vertical)
+	  - collision_detector_fsm
+	  - platform_manager + five platform instances
+	  - goal_zone
+	  - frog_sprite_controller_fsm
+	  - Debouncer for button cleanup
+	  - (Text) MY_CHAR_DRIVER + CHAR_GEN
+	  - (Pipeline) srldelay for small sync/data alignment
+
+	Sprite ROM / transparency quirks:
+	- Sprites are stored in block RAMs (blk_mem_gen_0 for TheFrog and blk_mem_gen_1 for GoofyFrog).
+	- Block RAM outputs are synchronous (data appears after an address is registered), so the design uses a delayed hit flag (is_frog_delay) to line up the ROM pixel with the correct screen pixel.
+	- A transparent color key is used: pixels equal to FROG_TRANSPARENT_COLOR are treated as “not drawn.”
+
+	Platform disappearance timing approach:
+	- collision_detector_fsm outputs support_mask identifying which platform is supporting the frog.
+	- FlappyFrog latches support_mask while standing, then generates disappear pulses on entry to the JUMPING state.
+	- This ensures “disappear after jump begins” behavior rather than disappearing immediately on contact.
+
+	Board I/O quirk:
+	- DISP1/DISP2 are active-low anodes; tying them to '1' forces digits off.
+
+
+2) game_tick.vhd (tick pulse generator)
+	Purpose:
+	- Produces a one-clock-cycle pulse at ~60 Hz from the 74.25 MHz pixel clock.
+
+	Design notes:
+	- Has an enable input. When enable='0', the counter resets to 0 and no ticks are produced.
+	- Used in FlappyFrog.vhd twice:
+	  - game_tick_pulse: gated by gameplay_enable (pauses gameplay updates during win pause/reset handling)
+	  - sprite_tick_pulse: enable tied to '1' so sprite timing can continue independently if desired
+
+
+3) game_state_fsm.vhd (high-level game flow)
+	Purpose:
+	- Controls whether gameplay is running, performs a soft reset on “fell out,” and holds a win pause when the goal is reached.
+
+	FSM behavior:
+	- GS_RUNNING: normal play
+	- GS_SOFT_RESET: one-cycle state that asserts soft_reset
+	- GS_WIN_PAUSE: latched pause after hit_goal
+
+	Design note:
+	- This is a clean “supervisor” FSM; it doesn’t implement motion itself, just enables/resets other modules.
+
+
+4) frog_motion.vhd (horizontal movement)
+	Purpose:
+	- Updates the frog’s world-space X position at ~60 Hz based on button commands.
+
+	Design notes / quirks:
+	- Uses its own internal tick divider (MOVE_TICK_MAX) rather than reusing game_tick.
+	  - This is functionally fine, but it means frog_motion has an independent 60 Hz enable.
+	- Clamps frog_x to [MIN_X, MAX_X] so it can’t walk past world bounds.
+	- frog_x is 12 bits wide to support world coordinates up to 2600.
+
+
+5) frog_vertical_fsm.vhd (vertical physics + state)
+	Purpose:
+	- Implements vertical motion with simple gravity and jump velocity.
+
+	Inputs/outputs:
+	- tick_en: vertical updates only on the 60 Hz tick.
+	- platform_support/platform_top_y: used to land and hold the frog on a platform surface.
+	- jump_release_enable: gating signal (from sprite controller) that decides when a jump is allowed to start.
+
+	FSM states:
+	- FALLING: gravity increases vy; y integrates vy
+	- ON_PLATFORM: y is pinned to the platform; vy=0
+	- JUMPING: sets initial upward velocity then transitions back to FALLING when vy becomes non-negative
+
+	“Game feel” tuning:
+	- Gravity is applied every N ticks (ASCEND_GRAV_TICKS / DESCEND_GRAV_TICKS), letting ascent/descent feel different.
+	- MAX_FALL_SPEED prevents unrealistic fast falls.
+
+
+6) frog_sprite_controller_fsm.vhd (sprite selection + delayed jump release)
+	Purpose:
+	- Coordinates sprite choice (TheFrog vs GoofyFrog) with gameplay events and implements the non-blocking delays.
+
+	Behaviors:
+	- Pre-jump delay:
+	  - When frog is standing on a platform, switch to GoofyFrog for 0.25s (15 ticks).
+	  - After the delay, it asserts jump_release_enable so frog_vertical_fsm can begin the jump.
+	- Goal behavior:
+	  - When hit_goal is asserted, alternates sprites every 0.25s for a limited number of toggles (10), then holds TheFrog.
+
+	Design note:
+	- All timing is implemented with counters advanced by tick_en; there is no blocking wait.
+
+
+7) platform_manager.vhd (platform layout source)
+	Purpose:
+	- Defines the static world-space X locations and lengths (in units) of the platforms.
+
+	Outputs:
+	- p*_world_x: stable world anchors for collision detection
+	- p*_x_screen: derived from scene_x for rendering
+	- p*_unit: platform width in 24 px units
+
+	Design note:
+	- Keeping platform layout here makes it easy to tweak the level without touching collision or rendering internals.
+
+
+8) platform.vhd (single platform render + visibility FSM)
+	Purpose:
+	- Determines whether the current pixel lies inside a platform rectangle, and tracks whether the platform is visible.
+
+	Visibility FSM:
+	- SHOWN by default.
+	- HIDDEN after disappear_pulse.
+	- The platform stays hidden (no auto-respawn) once disappeared.
+
+	Design note:
+	- platform_visible is exported so collision logic can ignore hidden platforms.
+
+
+9) goal_zone.vhd (goal rectangle + placement)
+	Purpose:
+	- Creates a simple rectangular goal area and provides its world-space position.
+
+	Placement approach:
+	- Computes a world-space goal X such that when scene_x is at maximum scroll, the goal appears centered on-screen.
+	- goal_pixel_on is purely a rendering helper (a rectangle check in active coordinates).
+
+
+10) collision_detector_fsm.vhd (platform support + goal hit)
+	 Purpose:
+	 - Computes:
+		- platform_support: whether the frog is standing/landing on any visible platform.
+		- support_mask: which platform index is supporting the frog (used for disappearance behavior).
+		- hit_goal: frog overlaps the goal rectangle.
+
+	 Collision approach:
+	 - Uses a centered “mid-body” horizontal band (FROG_COLLISION_WIDTH = 30) instead of the full sprite width.
+		This reduces false positives where the frog’s wide sprite would clip platforms/goal on the edges.
+	 - Landing detection uses frog_vy and a next_bottom prediction so it can detect crossing the platform Y between ticks.
+
+	 Design quirk:
+	 - support_mask is set using the first platform found that qualifies; the order is deterministic (p1..p5).
+
+
+Extra notes (IP / helper blocks referenced by the top-level)
+-----------------------------------------------------------
+- clk_wiz_0: generates pix_clk and pix_clkx5 and a locked signal.
+- hdmi_tx_v1_0: takes RGB + sync + vde and outputs TMDS signals.
+- blk_mem_gen_0 / blk_mem_gen_1: synchronous block RAM sprite storage.
+- srldelay: small delay line used to align signals through the pipeline.
+- Debouncer: makes button presses clean and stable.
+- MY_CHAR_DRIVER + CHAR_GEN: text overlay path (ASCII character selection + glyph rendering).
+
