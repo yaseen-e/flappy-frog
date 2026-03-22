@@ -9,6 +9,9 @@ entity FlappyFrog is
         btn2        : in  STD_LOGIC;
         btn3        : in  STD_LOGIC;
 
+        DISP1       : out STD_LOGIC_VECTOR(3 downto 0);
+        DISP2       : out STD_LOGIC_VECTOR(3 downto 0);
+
         hdmi_tx_hpd : out STD_LOGIC;
         TMDS_CLK_P  : out STD_LOGIC;
         TMDS_CLK_N  : out STD_LOGIC;
@@ -411,6 +414,10 @@ architecture Behavioral of FlappyFrog is
     end component;
 
 begin
+
+    -- Seven-segment anodes are active-low; force all digits off from startup.
+    DISP1 <= (others => '1');
+    DISP2 <= (others => '1');
 
     pix_rst <= rst or (not locked);
     game_reset <= pix_rst or soft_reset;

@@ -16,6 +16,21 @@ set_property -dict {PACKAGE_PIN H2 IOSTANDARD LVCMOS33} [get_ports {btn2}]
 set_property -dict {PACKAGE_PIN J1 IOSTANDARD LVCMOS33} [get_ports {btn3}]
 
 # ---------------------------------------------------------------------------
+# Seven-Segment Display Anodes (Active-Low)
+# DISP1 = left 4-digit module anodes
+# DISP2 = right 4-digit module anodes
+# ---------------------------------------------------------------------------
+set_property -dict {PACKAGE_PIN D5 IOSTANDARD LVCMOS33} [get_ports {DISP1[0]}]
+set_property -dict {PACKAGE_PIN C4 IOSTANDARD LVCMOS33} [get_ports {DISP1[1]}]
+set_property -dict {PACKAGE_PIN C7 IOSTANDARD LVCMOS33} [get_ports {DISP1[2]}]
+set_property -dict {PACKAGE_PIN A8 IOSTANDARD LVCMOS33} [get_ports {DISP1[3]}]
+
+set_property -dict {PACKAGE_PIN H3 IOSTANDARD LVCMOS33} [get_ports {DISP2[0]}]
+set_property -dict {PACKAGE_PIN J4 IOSTANDARD LVCMOS33} [get_ports {DISP2[1]}]
+set_property -dict {PACKAGE_PIN F3 IOSTANDARD LVCMOS33} [get_ports {DISP2[2]}]
+set_property -dict {PACKAGE_PIN E4 IOSTANDARD LVCMOS33} [get_ports {DISP2[3]}]
+
+# ---------------------------------------------------------------------------
 # Switches (Mapping to Slide Switches 0-7)
 # ---------------------------------------------------------------------------
 set_property -dict {PACKAGE_PIN V2 IOSTANDARD LVCMOS33} [get_ports {sw[0]}]
